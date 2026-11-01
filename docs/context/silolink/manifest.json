@@ -1,0 +1,94 @@
+{
+  "date": "2026-11-01",
+  "projectName": "SiloLink",
+  "status": "handoff-only",
+  "snapshots": [
+    {
+      "sourceInOriginalProject": "docs/reports/2026-11-01-local-research-workspace.md",
+      "bundledPath": "sources/2026-11-01-local-research-workspace.md",
+      "sha256": "3e9a3167aad9bdd8517870e1473a09e8e4a796f48d3b56663ca9365bd1fe6c5f"
+    },
+    {
+      "sourceInOriginalProject": "docs/reports/2026-11-01-project-records-platform.md",
+      "bundledPath": "sources/2026-11-01-project-records-platform.md",
+      "sha256": "f0282a6ae4af8d64173b110d75657fd46921474d2dd5c732ef969b7e722818ac"
+    },
+    {
+      "sourceInOriginalProject": "docs/reports/2026-11-01-groundwork-alternatives.md",
+      "bundledPath": "sources/2026-11-01-groundwork-alternatives.md",
+      "sha256": "94f002feec5a6d1372d7e5fa8578454f4d459fd813f46d8d6c6b037757565350"
+    },
+    {
+      "sourceInOriginalProject": "docs/reports/2026-11-01-groundwork-build-decision.md",
+      "bundledPath": "sources/2026-11-01-groundwork-build-decision.md",
+      "sha256": "13f36adc5fae82b0dadaaeab6a4c5bd5bbb64183b6ea53fcf7aa28add9bd8e8f"
+    },
+    {
+      "sourceInOriginalProject": "docs/handoffs/local-research-app.md",
+      "bundledPath": "sources/local-research-app.md",
+      "sha256": "031be97c4fdc0134e2b509803221125335f60ada8246e64d2539e3ac9d854800"
+    }
+  ],
+  "files": [
+    {
+      "path": "CONTEXT.md",
+      "sha256": "4838b6d2159f7015ded10f6579f01de2abbf53905e6e56ad3e77f4c63b3a8a2e"
+    },
+    {
+      "path": "PROMPT.md",
+      "sha256": "b4519277dc21e6c1f1776025044e7fb4542819e92fb19d6c089f404072b2c63b"
+    },
+    {
+      "path": "README.md",
+      "sha256": "6de617c5a83f612ddfcd44bea19a9149fd62a33f03db197835a6ec31d2778604"
+    },
+    {
+      "path": "RESEARCH.md",
+      "sha256": "59f155f228a58568208c5f8aa3273dde7127dc571358a8c4ecfe85e09dfb2e3c"
+    },
+    {
+      "path": "VERIFICATION.md",
+      "sha256": "243c83eb8fa4fe343b65427bde00a77af4cba48d6638ef3b726534a753cc46be"
+    },
+    {
+      "path": "docs/reports/README.md",
+      "sha256": "4b146beaf9705b5166252a6dd5ab24b5c37bd5fca0c80f7694ea0e3bcfa866fe"
+    },
+    {
+      "path": "overview.html",
+      "sha256": "d277e413230afbb689544331b9db0a7b4dbee3ab7c460cefae4e6ef36e001e6b"
+    },
+    {
+      "path": "overview.md",
+      "sha256": "e415ffb17288fb4dfc99985c73f879b2ecb58793da087a03f1f822d0fc21e238"
+    },
+    {
+      "path": "snapshot-provenance.json",
+      "sha256": "69801d7bb6bd8bc0b907e0951820a1b6307592fda25f92cbe33c885ecb070381"
+    },
+    {
+      "path": "sources/2026-11-01-groundwork-alternatives.md",
+      "sha256": "94f002feec5a6d1372d7e5fa8578454f4d459fd813f46d8d6c6b037757565350"
+    },
+    {
+      "path": "sources/2026-11-01-groundwork-build-decision.md",
+      "sha256": "13f36adc5fae82b0dadaaeab6a4c5bd5bbb64183b6ea53fcf7aa28add9bd8e8f"
+    },
+    {
+      "path": "sources/2026-11-01-local-research-workspace.md",
+      "sha256": "3e9a3167aad9bdd8517870e1473a09e8e4a796f48d3b56663ca9365bd1fe6c5f"
+    },
+    {
+      "path": "sources/2026-11-01-project-records-platform.md",
+      "sha256": "f0282a6ae4af8d64173b110d75657fd46921474d2dd5c732ef969b7e722818ac"
+    },
+    {
+      "path": "sources/README.md",
+      "sha256": "b0697bde6f3f5ab2ef6f40c108f942b1205225167019848abe42944617e3a35d"
+    },
+    {
+      "path": "sources/local-research-app.md",
+      "sha256": "031be97c4fdc0134e2b509803221125335f60ada8246e64d2539e3ac9d854800"
+    }
+  ]
+}

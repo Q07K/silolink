@@ -1,0 +1,2 @@
+# Preserve archived handoff bytes and their original whitespace for manifest hashes.
+docs/context/silolink/** -text -whitespace

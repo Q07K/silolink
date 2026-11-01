@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-01",
+  "originalProject": "test2",
+  "snapshots": [
+    {
+      "sourceInOriginalProject": "docs/reports/2026-11-01-local-research-workspace.md",
+      "bundledPath": "sources/2026-11-01-local-research-workspace.md",
+      "sha256": "3e9a3167aad9bdd8517870e1473a09e8e4a796f48d3b56663ca9365bd1fe6c5f"
+    },
+    {
+      "sourceInOriginalProject": "docs/reports/2026-11-01-project-records-platform.md",
+      "bundledPath": "sources/2026-11-01-project-records-platform.md",
+      "sha256": "f0282a6ae4af8d64173b110d75657fd46921474d2dd5c732ef969b7e722818ac"
+    },
+    {
+      "sourceInOriginalProject": "docs/reports/2026-11-01-groundwork-alternatives.md",
+      "bundledPath": "sources/2026-11-01-groundwork-alternatives.md",
+      "sha256": "94f002feec5a6d1372d7e5fa8578454f4d459fd813f46d8d6c6b037757565350"
+    },
+    {
+      "sourceInOriginalProject": "docs/reports/2026-11-01-groundwork-build-decision.md",
+      "bundledPath": "sources/2026-11-01-groundwork-build-decision.md",
+      "sha256": "13f36adc5fae82b0dadaaeab6a4c5bd5bbb64183b6ea53fcf7aa28add9bd8e8f"
+    },
+    {
+      "sourceInOriginalProject": "docs/handoffs/local-research-app.md",
+      "bundledPath": "sources/local-research-app.md",
+      "sha256": "031be97c4fdc0134e2b509803221125335f60ada8246e64d2539e3ac9d854800"
+    }
+  ]
+}
