@@ -1,3 +1,4 @@
+pub mod changes;
 pub mod cli;
 pub mod documents;
 pub mod error;

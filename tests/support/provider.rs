@@ -6,6 +6,39 @@ use std::{
 fn main() {
     let scenario = std::env::var("SILOLINK_FIXTURE_SCENARIO").unwrap_or_else(|_| "normal".into());
     let root = std::env::var("SILOLINK_FIXTURE_ROOT").unwrap_or_default();
+    if scenario == "change-crash" {
+        let project = silolink::project::read(std::path::Path::new(&root)).unwrap();
+        let state = std::env::var("SILOLINK_FIXTURE_STATE").unwrap();
+        let checkpoint = std::env::var("SILOLINK_CHANGE_STAGE").unwrap();
+        let progress = |stage: &str, _: &str| {
+            if stage == checkpoint {
+                println!("ready");
+                io::stdout().flush().unwrap();
+                loop {
+                    std::thread::sleep(Duration::from_secs(1));
+                }
+            }
+        };
+        if let Ok(id) = std::env::var("SILOLINK_CHANGE_UNDO") {
+            silolink::changes::undo_with_progress(
+                &project,
+                std::path::Path::new(&state),
+                &id,
+                progress,
+            )
+            .unwrap();
+        } else {
+            let filename = std::env::var("SILOLINK_CHANGE_PLAN").unwrap();
+            silolink::changes::apply_with_progress(
+                &project,
+                std::path::Path::new(&filename),
+                std::path::Path::new(&state),
+                progress,
+            )
+            .unwrap();
+        }
+        return;
+    }
     if scenario == "store-crash" {
         let project = silolink::project::read(std::path::Path::new(&root)).unwrap();
         let state = std::env::var("SILOLINK_FIXTURE_STATE").unwrap();

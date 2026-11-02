@@ -5,7 +5,7 @@ use crate::{
 use std::{collections::HashMap, path::PathBuf};
 
 pub const MAX_ITEMS: usize = 9_007_199_254_740_991;
-pub const HELP: &str = "SiloLink native CLI\n\n  silolink init [--project <directory>]\n  silolink docs [--project <directory>]\n  silolink setup [--host codex|claude|antigravity|all] [--scope user|project] [--project <directory>]\n  silolink history [--project <directory>] [--provider codex|claude|all] [--limit <items>]\n  silolink sync [--project <directory>] [--provider codex|claude|all] [--state-dir <directory>] [--limit <items>]\n  silolink records [--project <directory>] [--provider codex|claude|all] [--state-dir <directory>]\n  silolink watch [--project <directory>] [--provider codex|claude|all] [--state-dir <directory>] [--interval <seconds>]\n\ninit preserves existing documents. setup installs the shared skill.\ndocs reads Markdown and proposes evidence-based reviews without changing files.\nhistory defaults to 1000 source items per provider; sync/watch read all supported history.\nChoose --state-dir or SILOLINK_STATE_DIR to store conversations locally.\nwatch runs in the foreground (30 seconds by default).\nExit codes: 0 success, 1 failure, 2 partial result, 130 interrupted watch.\n";
+pub const HELP: &str = "SiloLink native CLI\n\n  silolink init [--project <directory>]\n  silolink docs [--project <directory>]\n  silolink docs-check --plan <file> [--project <directory>]\n  silolink docs-apply --plan <file> [--state-dir <directory>] [--project <directory>]\n  silolink docs-changes [--change <id>] [--state-dir <directory>] [--project <directory>]\n  silolink docs-undo --change <id> [--state-dir <directory>] [--project <directory>]\n  silolink setup [--host codex|claude|antigravity|all] [--scope user|project] [--project <directory>]\n  silolink history [--project <directory>] [--provider codex|claude|all] [--limit <items>]\n  silolink sync [--project <directory>] [--provider codex|claude|all] [--state-dir <directory>] [--limit <items>]\n  silolink records [--project <directory>] [--provider codex|claude|all] [--state-dir <directory>]\n  silolink watch [--project <directory>] [--provider codex|claude|all] [--state-dir <directory>] [--interval <seconds>]\n\ninit preserves existing documents. setup installs the shared skill.\ndocs reads Markdown and proposes evidence-based reviews without changing files.\ndocs-check previews a concrete plan; docs-apply journals it; docs-undo restores unchanged postimages.\nhistory defaults to 1000 source items per provider; sync/watch read all supported history.\nChoose --state-dir or SILOLINK_STATE_DIR to store conversations locally.\nwatch runs in the foreground (30 seconds by default).\nExit codes: 0 success, 1 failure, 2 partial result, 130 interrupted watch.\n";
 #[derive(Debug)]
 pub struct Options {
     pub command: String,
@@ -16,6 +16,8 @@ pub struct Options {
     pub interval_seconds: u64,
     pub host: String,
     pub scope: String,
+    pub plan: Option<PathBuf>,
+    pub change: Option<String>,
 }
 fn invalid() -> Error {
     Error::new(
@@ -52,6 +54,8 @@ pub fn parse(args: &[String]) -> Result<Options> {
                 "--scope" => "scope",
                 "--state-dir" => "state-dir",
                 "--interval" => "interval",
+                "--plan" => "plan",
+                "--change" => "change",
                 _ => return Err(invalid()),
             };
             let value = if let Some(value) = inline {
@@ -87,8 +91,13 @@ pub fn parse(args: &[String]) -> Result<Options> {
             "scope",
             "state-dir",
             "interval",
+            "plan",
+            "change",
         ],
         "init" | "docs" => &["project"],
+        "docs-check" => &["project", "plan"],
+        "docs-apply" => &["project", "plan", "state-dir"],
+        "docs-changes" | "docs-undo" => &["project", "change", "state-dir"],
         "setup" => &["project", "host", "scope"],
         "history" => &["project", "provider", "limit"],
         "sync" => &["project", "provider", "limit", "state-dir"],
@@ -152,13 +161,23 @@ pub fn parse(args: &[String]) -> Result<Options> {
         .get("state-dir")
         .cloned()
         .or_else(|| std::env::var("SILOLINK_STATE_DIR").ok());
-    if matches!(command.as_str(), "sync" | "records" | "watch")
-        && state_dir.as_ref().is_none_or(|s| s.trim().is_empty())
+    if matches!(
+        command.as_str(),
+        "sync" | "records" | "watch" | "docs-apply" | "docs-changes" | "docs-undo"
+    ) && state_dir.as_ref().is_none_or(|s| s.trim().is_empty())
     {
         return Err(Error::new(
             "STATE_DIRECTORY_REQUIRED",
-            "Choose --state-dir or set SILOLINK_STATE_DIR before saving or reading records.",
+            "Choose --state-dir or set SILOLINK_STATE_DIR before using persistent records or document changes.",
         ));
+    }
+    if matches!(command.as_str(), "docs-check" | "docs-apply")
+        && values.get("plan").is_none_or(|s| s.trim().is_empty())
+    {
+        return Err(invalid());
+    }
+    if command == "docs-undo" && values.get("change").is_none_or(|s| s.trim().is_empty()) {
+        return Err(invalid());
     }
     let directory =
         values
@@ -180,6 +199,8 @@ pub fn parse(args: &[String]) -> Result<Options> {
         interval_seconds,
         host,
         scope,
+        plan: values.get("plan").map(PathBuf::from),
+        change: values.get("change").cloned(),
     })
 }
 pub fn init(options: &Options) -> Result<serde_json::Value> {

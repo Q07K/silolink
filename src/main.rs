@@ -1,6 +1,6 @@
 use serde_json::{Value, json};
 use silolink::{
-    cli, documents,
+    changes, cli, documents,
     error::{Error, Result},
     history, install, project, sync,
 };
@@ -40,7 +40,7 @@ async fn run() -> Result<u8> {
             })?;
         return Ok(0);
     }
-    let report = if options.command == "init" {
+    let mut report = if options.command == "init" {
         cli::init(&options)?
     } else if options.command == "setup" {
         let home = std::env::var_os("SILOLINK_USER_HOME")
@@ -69,6 +69,22 @@ async fn run() -> Result<u8> {
         let project = project::read(&options.directory)?;
         match options.command.as_str() {
             "docs" => documents::scan(&project)?,
+            "docs-check" => changes::check(&project, options.plan.as_deref().unwrap())?,
+            "docs-apply" => changes::apply(
+                &project,
+                options.plan.as_deref().unwrap(),
+                options.state_dir.as_deref().unwrap(),
+            )?,
+            "docs-changes" => changes::list(
+                &project,
+                options.state_dir.as_deref().unwrap(),
+                options.change.as_deref(),
+            )?,
+            "docs-undo" => changes::undo(
+                &project,
+                options.state_dir.as_deref().unwrap(),
+                options.change.as_deref().unwrap(),
+            )?,
             "history" => {
                 let mut report = history::collect(&project, &options.provider, options.limit).await;
                 report["command"] = json!("history");
@@ -120,6 +136,12 @@ async fn run() -> Result<u8> {
             _ => unreachable!("validated command"),
         }
     };
+    if matches!(
+        options.command.as_str(),
+        "docs-apply" | "docs-changes" | "docs-undo"
+    ) {
+        report["command"] = json!(options.command);
+    }
     emit(&report)?;
     Ok(match report["status"].as_str() {
         Some("partial") => 2,

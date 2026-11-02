@@ -2,7 +2,7 @@
 
 여러 프로젝트와 AI 도구에 흩어진 기록을 연결하고, 사용 맥락을 바탕으로 조사·학습·프로젝트 운영을 지원하는 CLI·플러그인·데스크톱 제품을 개발합니다.
 
-현재는 **Rust 네이티브 CLI**로 도구별 스킬 설치, 프로젝트 초기화, 문서 현황·정리 후보 조회, Codex·Claude 텍스트 이력 조회·저장·주기 수집을 제공합니다. JavaScript CLI와 npm·Agent SDK 런타임은 제거했습니다. 문서 변경·복구·데스크톱 상주 수집·분석은 후속 구현입니다.
+현재는 **Rust 네이티브 CLI**로 도구별 스킬 설치, 프로젝트 초기화, 문서 현황·정리 후보 조회, 검토한 문서 변경안의 적용·복구, Codex·Claude 텍스트 이력 조회·저장·주기 수집을 제공합니다. JavaScript CLI와 npm·Agent SDK 런타임은 제거했습니다. 데스크톱 상주 수집·분석은 후속 구현입니다.
 
 ## 저장소에서 설치하고 사용하기
 
@@ -17,7 +17,7 @@ Windows x64를 우선 지원합니다. 실행에는 Node/npm/Rust 설치가 필�
 
 설치기는 사용자 폴더에 실행 파일을 복사하고 PATH와 스킬을 등록합니다. 그다음 사용할 프로젝트를 도구에서 열고 Claude Code·Antigravity에서는 `/silolink init`, Codex에서는 스킬 메뉴 또는 `$silolink init`으로 호출합니다. 기존·신규 프로젝트 모두 같은 명령을 사용합니다. 스킬은 네이티브 CLI를 직접 실행합니다. 공개 릴리스 배포·자동 업데이트는 아직 제공하지 않습니다.
 
-`init`은 프로젝트 ID만 만들고 기존 문서를 보존합니다. 공통 스킬은 초기화 뒤 `silolink docs`로 Markdown의 제목·중복 내용·로컬 링크와 정리 후보를 안내합니다. 직접 `silolink docs --project "C:\path\to\project"`로 조회할 수도 있습니다. 제목만 같은 문서를 자동 통합하지 않으며 실제 통합·재작성·삭제는 아직 수행하지 않습니다.
+`init`은 프로젝트 ID만 만들고 기존 문서를 보존합니다. 공통 스킬은 초기화 뒤 `silolink docs`로 Markdown의 제목·중복 내용·로컬 링크와 정리 후보를 안내합니다. 직접 `silolink docs --project "C:\path\to\project"`로 조회할 수도 있습니다. 사용자·AI가 원문을 검토해 작성한 변경안은 `docs-check`로 전후 내용과 영향을 보고, `docs-apply`로 적용하고, `docs-changes`와 `docs-undo`로 상태 확인·복구할 수 있습니다. 형식과 재개·충돌 처리는 [CLI 계약](docs/development/cli.md)에 정리했습니다.
 
 기록 조회는 `silolink history`, 로컬 저장·반복 수집은 다음과 같습니다. 저장 위치는 명시적으로 선택하며 여러 PC 동기화 정책은 아직 미정입니다.
 
