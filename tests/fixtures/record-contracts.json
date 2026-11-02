@@ -1,0 +1,272 @@
+{
+  "projectId": "11111111-1111-4111-8111-111111111111",
+  "observedAt": "2026-11-02T01:00:00.000Z",
+  "claude": {
+    "sessionId": "container",
+    "messages": [
+      {
+        "uuid": "one",
+        "session_id": "origin",
+        "type": "user",
+        "timestamp": "2026-11-02T09:00:00+09:00",
+        "message": {
+          "content": "시안을 보여줘\n\"인용\" 😀"
+        }
+      },
+      {
+        "uuid": "two",
+        "session_id": "origin",
+        "type": "user",
+        "message": {
+          "content": [
+            {
+              "type": "text",
+              "text": "same"
+            },
+            {
+              "type": "image",
+              "source": {}
+            },
+            {
+              "type": "text",
+              "text": "again"
+            }
+          ]
+        }
+      },
+      {
+        "uuid": "three",
+        "session_id": "container",
+        "type": "assistant",
+        "timestamp": "invalid",
+        "message": {
+          "content": "same"
+        }
+      },
+      {
+        "uuid": "four",
+        "session_id": "container",
+        "type": "user",
+        "timestamp": "2026-11-02T01:00:00Z",
+        "message": {
+          "content": "same"
+        }
+      }
+    ],
+    "expected": {
+      "records": [
+        {
+          "schemaVersion": 1,
+          "id": "efe3e261d0cfd830ac29e5f9380b2d49337cf6f7586e45a64009047dd4c2382c",
+          "revision": "1a41801625a433931db382bc02249e456217dddc37a51111a68f1e42e679d86b",
+          "projectId": "11111111-1111-4111-8111-111111111111",
+          "source": {
+            "provider": "claude",
+            "sessionId": "origin",
+            "itemId": "one",
+            "turnId": null,
+            "sourceKind": null,
+            "containerSessionId": "container"
+          },
+          "role": "user",
+          "text": "시안을 보여줘\n\"인용\" 😀",
+          "textParts": [
+            "시안을 보여줘\n\"인용\" 😀"
+          ],
+          "occurredAt": "2026-11-02T00:00:00.000Z",
+          "timeBasis": "message",
+          "observedAt": "2026-11-02T01:00:00.000Z",
+          "phase": null
+        },
+        {
+          "schemaVersion": 1,
+          "id": "8b5435cdd31dc63c1d308a8e687115a354e177c7a00010f29c1e7ccb11baf7bb",
+          "revision": "a7d124e68e108f0bfbe823c94458e7acb5b03590c0d984f531f1490517991611",
+          "projectId": "11111111-1111-4111-8111-111111111111",
+          "source": {
+            "provider": "claude",
+            "sessionId": "origin",
+            "itemId": "two",
+            "turnId": null,
+            "sourceKind": null,
+            "containerSessionId": "container"
+          },
+          "role": "user",
+          "text": "same\nagain",
+          "textParts": [
+            "same",
+            "again"
+          ],
+          "occurredAt": null,
+          "timeBasis": "unknown",
+          "observedAt": "2026-11-02T01:00:00.000Z",
+          "phase": null
+        },
+        {
+          "schemaVersion": 1,
+          "id": "3a4f86fc8f9f82cd76947891afe63a7229c6cbfbafa695ed79f9b34f4edce8c1",
+          "revision": "d7ba18cc2a0b23d5ec37e1ba92b1453e82743933532668f3ed71439a822738de",
+          "projectId": "11111111-1111-4111-8111-111111111111",
+          "source": {
+            "provider": "claude",
+            "sessionId": "container",
+            "itemId": "three",
+            "turnId": null,
+            "sourceKind": null
+          },
+          "role": "assistant",
+          "text": "same",
+          "textParts": [
+            "same"
+          ],
+          "occurredAt": null,
+          "timeBasis": "unknown",
+          "observedAt": "2026-11-02T01:00:00.000Z",
+          "phase": null
+        },
+        {
+          "schemaVersion": 1,
+          "id": "7e317d1463c08b3368205256fdfdcab78aa2e52cf1fcdbdd80474f74b4cf21b9",
+          "revision": "b8d4c52b1c205fb76dd005a266da631da3ad70cd0bdf4d012d32e398db0e43cb",
+          "projectId": "11111111-1111-4111-8111-111111111111",
+          "source": {
+            "provider": "claude",
+            "sessionId": "container",
+            "itemId": "four",
+            "turnId": null,
+            "sourceKind": null
+          },
+          "role": "user",
+          "text": "same",
+          "textParts": [
+            "same"
+          ],
+          "occurredAt": "2026-11-02T01:00:00.000Z",
+          "timeBasis": "message",
+          "observedAt": "2026-11-02T01:00:00.000Z",
+          "phase": null
+        }
+      ],
+      "warnings": [],
+      "omitted": {
+        "image": 1
+      }
+    }
+  },
+  "codex": {
+    "threadId": "thread",
+    "source": "exec",
+    "turns": [
+      {
+        "id": "turn",
+        "startedAt": 1793577600,
+        "items": [
+          {
+            "id": "user",
+            "type": "userMessage",
+            "content": [
+              {
+                "type": "text",
+                "text": "질문"
+              }
+            ]
+          },
+          {
+            "id": "assistant",
+            "type": "agentMessage",
+            "text": "응답",
+            "phase": "final_answer"
+          },
+          {
+            "id": "tool",
+            "type": "commandExecution"
+          }
+        ]
+      },
+      {
+        "id": "missing-time",
+        "items": [
+          {
+            "id": "no-time",
+            "type": "agentMessage",
+            "text": "알 수 없음"
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "records": [
+        {
+          "schemaVersion": 1,
+          "id": "3eb7b504d893269f023ff9fedf2e00469db6f0e8799fb601470c8cd42a143688",
+          "revision": "948e7504d3636421a0f6f2a0be07630d1ab167bfd448292ee339678e0045a6e9",
+          "projectId": "11111111-1111-4111-8111-111111111111",
+          "source": {
+            "provider": "codex",
+            "sessionId": "thread",
+            "itemId": "user",
+            "turnId": "turn",
+            "sourceKind": "exec"
+          },
+          "role": "user",
+          "text": "질문",
+          "textParts": [
+            "질문"
+          ],
+          "occurredAt": "2026-11-02T00:00:00.000Z",
+          "timeBasis": "turn-start",
+          "observedAt": "2026-11-02T01:00:00.000Z",
+          "phase": null
+        },
+        {
+          "schemaVersion": 1,
+          "id": "67a862b82b1d3be80211167c6af69a2f86dd7fbbea5ef3ccb4abe247f287e479",
+          "revision": "4b984290ce9f9bcbb07b401070e0030bd03666e717cd6dc88e3eca6b30e2a1dc",
+          "projectId": "11111111-1111-4111-8111-111111111111",
+          "source": {
+            "provider": "codex",
+            "sessionId": "thread",
+            "itemId": "assistant",
+            "turnId": "turn",
+            "sourceKind": "exec"
+          },
+          "role": "assistant",
+          "text": "응답",
+          "textParts": [
+            "응답"
+          ],
+          "occurredAt": "2026-11-02T00:00:00.000Z",
+          "timeBasis": "turn-start",
+          "observedAt": "2026-11-02T01:00:00.000Z",
+          "phase": "final_answer"
+        },
+        {
+          "schemaVersion": 1,
+          "id": "e17df27c7782009d3865de413082ed5eb2741fb6f4a6383935892da8586b451c",
+          "revision": "e586401df9489c712b796ea09091586c66401c186f0f25b3e214cff620b376e3",
+          "projectId": "11111111-1111-4111-8111-111111111111",
+          "source": {
+            "provider": "codex",
+            "sessionId": "thread",
+            "itemId": "no-time",
+            "turnId": "missing-time",
+            "sourceKind": "exec"
+          },
+          "role": "assistant",
+          "text": "알 수 없음",
+          "textParts": [
+            "알 수 없음"
+          ],
+          "occurredAt": null,
+          "timeBasis": "unknown",
+          "observedAt": "2026-11-02T01:00:00.000Z",
+          "phase": null
+        }
+      ],
+      "warnings": [],
+      "omitted": {
+        "commandExecution": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+# 네이티브 CLI 검증 사례
+
+기준은 [PRD](../docs/product/prd.md)와 [CLI 계약](../docs/development/cli.md)이다. 기존 JavaScript CLI의 사용자 동작·보존·실패 의무를 Rust로 이식한다. 테스트 함수 수가 아니라 연결된 동작과 최종 상태로 대응한다. 기본 명령은 `cargo test --all-targets --locked`이며 모델 요청을 포함하지 않는다.
+
+## 기존 사례와 Rust 대응
+
+| 요구·경계 | 현재 검증 위치·동작 | 유지하는 의무 |
+| --- | --- | --- |
+| R01 초기화·재실행 | [native_cli.rs](native_cli.rs), [native_project.rs](native_project.rs) | 기존 문서·ID 보존, 빈/기존 폴더 동일 경로, 미지원·손상·부실 메타데이터, 없는 대상·파일·링크 충돌, 진행 중 읽기, 실제 두 프로세스 경쟁·재시도 |
+| R02/R03 기록 변환 | [native_records.rs](native_records.rs), [record-contracts.json](fixtures/record-contracts.json) | 원문 ID, 같은 문장의 새 요청, 동일 ID의 수정, 수집 시각과 분리한 revision, 복사 컨테이너, 다른 프로젝트·접두어·외부 링크, 누락 ID·시각, 초 단위 턴 시각, 비텍스트·알 수 없는 종류 |
+| R02 프로세스·RPC·페이지 | [native_rpc.rs](native_rpc.rs), [native_history.rs](native_history.rs), [provider.rs](support/provider.rs) | 실제 자식 프로세스 초기화·응답·종료, 없는 실행 파일, RPC 코드·메서드, 비정상 종료·JSON·타임아웃, 두 단계 페이지·반복 커서, 잘못된 세션 항목·프로젝트 귀속, 부분 결과 보존 |
+| R02 Claude SDK 탈의존 | [native_adapter.rs](native_adapter.rs), [claude-adapter-contracts.json](fixtures/claude-adapter-contracts.json) | 공식 SDK 0.3.316에서 독립적으로 산출한 14개 사례의 텍스트·역할·원문 ID·리비전·시간·제외 항목까지 비교. 일반·분기·스트리밍 형제·압축·메타·채널·대기·중복·전달 확인 포함 |
+| R02 저장·경쟁·복구 | [native_store_edges.rs](native_store_edges.rs) | 재열기·이전 revision·부분/전체 실패 후 보존, 프로젝트/경로/필터 경계, 실제 DB 트리거 실패의 배치 롤백, 라이브 잠금·토큰 소유권, 다른 DB·미지원 버전·링크 보존, 실제 프로세스 강제 종료 후 트랜잭션·잠금 복구 |
+| R02 기존 데이터 이행 | [native_storage.rs](native_storage.rs), [legacy-store.json](fixtures/legacy-store.json) | 실제 JavaScript 저장 코드로 만든 합성 SQLite v1 자료를 네이티브에서 읽기. 1,005건 수집→재시작·신규 1건→공급자 없이 저장본 조회 |
+| 스킬 설치·CLI 호출 | [native_install.rs](native_install.rs) | 세 도구의 사용자 설치, 프로젝트 공유 경로 중복 방지, 초기화 이전 설치, 재실행, 수정/타사/링크 보존·부분 실패, PATH가 빈 환경에서 설치 메타데이터의 네이티브 실행 |
+| CLI 오류·출력 | [native_cli.rs](native_cli.rs), [native_history.rs](native_history.rs), [native_storage.rs](native_storage.rs) | 도움말·준비 오류의 무수정, 옵션·상한·간격 경계, 빈 이력과 모든 공급자 실패 구별, 부분 결과 JSON·종료 코드, 원문을 출력하지 않는 저장 요약 |
+| 지속 수집 | [native_watch.rs](native_watch.rs) | 간격 검증, 첫 주기 영구 반영, 대기 중 중지와 추가 주기 방지, 경쟁 실패 후 성공 재시도·중지. 중첩 수집은 순차 await와 프로젝트 잠금으로 차단 |
+| R01/R10 문서 현황·정리 후보 | [native_documents.rs](native_documents.rs) | 정리된 docs·흩어진 Markdown·빈 프로젝트, 초기화 필요·조회 무수정·재실행 안정성, 제목/코드/정의된 참조 링크·이미지·한글/공백 URL·외부/범위 밖 구별, 동일 바이트와 제목만 같은 자료의 비교 후보 구분, 역링크와 revision 근거, Windows 대소문자 링크, 프로젝트/하위 Git 제외 규칙·예외·생성 폴더·별도 하위 프로젝트·junction 제외, UTF-8/파일 크기/깊이 제한의 부분 결과 |
+| 설치 후 문서 조회 연결 | [native_install.rs](native_install.rs) | 세 호스트 스킬 설치 메타데이터의 실행 파일로 빈 PATH에서 init→docs 실행, 기존 문서 내용 보존. 모델이 스킬의 두 명령을 실제로 선택해 실행하는 최신 흐름은 별도 검증 대상 |
+
+기존 Node 테스트 62개의 동작 의무를 위의 Rust 통합 테스트와 매개변수 사례로 재구성했다. SDK 호출 자체에 대한 모의 테스트는 JSONL 입력·SDK 독립 기준으로 대체했고, `.js` 런처 테스트는 네이티브 실행 테스트로 바꾸었다. 기대를 완화하거나 일부를 스킵해 맞추지 않는다. SDK 원문·사용자 대화·자격증명은 회귀 자료에 넣지 않는다.
+
+## 실행 근거
+
+- 이전 기준: Windows·Node 22.20.0에서 `npm test` 62건 통과. 초기 CLI 구현의 과거 결과이며 현재 검증 명령은 아니다.
+- Rust 이식: 초기화·CLI·저장의 연결 사례를 실패 확인 후 구현했다. 스트리밍 순서, 대기 요청·전달 확인의 차이는 공식 SDK 기준 테스트로 재현하고 Rust 구현을 수정했다. 기준 해시·SDK 기대를 새 구현에 맞춰 완화하지 않았다.
+- 형식 호환: JavaScript 원문 ID·revision 산출 결과와 실제 JavaScript 저장 코드의 합성 DB 구조·payload를 고정 자료로 남겼다. 실제 사용 데이터는 복사하지 않았다.
+- 실제 조회: Claude 세 프로젝트 8·11·2건, 현재 Codex 프로젝트 64건에서 기존 구현 대비 ID 누락·추가·revision 차이 0, Rust 경고 0. 이 비교 뒤 SDK 런타임을 제거했다.
+- 설치: Windows 릴리스 파일을 공백이 있는 임시 설치 경로에 설치했고 PATH가 빈 환경에서 스킬 등록·실행을 확인했다. 실제 Codex가 스킬 1건을 발견하고 Claude `/silolink init`이 네이티브 실행 파일을 1회 호출해 성공·기존 문서 보존을 확인했다. 이 모델 검증은 기본 테스트에 포함하지 않는다.
+- Rust 전환 시점 재검증(2026-11-02): JavaScript 런타임·의존성 제거 후 `cargo test --all-targets --locked` 통합 테스트 37건 통과, 실패·스킵 0건. 위 SDK 독립 비교 14개 사례를 포함한다. Clippy `-D warnings`와 릴리스 빌드도 통과했다. 잘못된 Claude 설정 디렉터리의 실패 처리와 한글·이모지 프로젝트 경로의 UTF-16 인코딩 호환을 회귀 사례로 확인했다.
+- Rust 전환 시점 설치 파일: Windows x64 실행 파일 3,009,024바이트. 임시 설치 경로·한글/이모지 프로젝트·빈 PATH에서 설치기→스킬 등록→메타데이터의 실행 파일로 초기화→재초기화를 확인했고 문서·프로젝트 메타데이터가 보존됐다. 실행 파일의 동적 의존성은 Windows 시스템 DLL이며 Node·VC 런타임 설치가 필요하지 않다.
+- 시작 시간 관찰: 같은 Windows 환경에서 도움말 실행을 각각 3회 예열 후 20회 교차 측정했다. 이전 Node CLI 중앙값 85.3ms·p95 86.8ms, Rust CLI 중앙값 27.7ms·p95 29.9ms였다. 이는 도움말을 출력하고 종료하는 프로세스 시간이며, 이력 수집·모델 응답 속도의 개선 수치가 아니다.
+- 링크: Windows 파일 심볼릭 링크에 관리자 권한을 요구하지 않도록 디렉터리 junction으로 재분류 경계를 검증한다. 테스트 준비 실패를 스킵하지 않는다.
+- 문서 현황 단계(2026-11-02): 최초 요구 사례 6건이 미지원 명령으로 실패하는 것을 확인한 뒤 구현했다. Windows 대소문자 링크의 참조 영향 누락도 별도 실패로 재현하고 수정했다. 하위 Git 제외 규칙·예외와 깊이 경계를 더한 문서 테스트는 9건이다. 기존 37건의 의무를 유지해 `cargo test --all-targets --locked` 총 46건 통과, 실패·스킵 0건. `cargo fmt --all`, Clippy `-D warnings`, 릴리스 빌드와 공통 스킬 형식 검증도 통과했다.
+- 최신 설치 흐름: 저장소 문서·테스트를 복사한 공백/한글 임시 프로젝트에서 설치기→프로젝트 범위 스킬 등록→메타데이터의 실행 파일로 init→docs→재조회했다. 빈 PATH에서도 문서 9개·검토 후보 2개를 조회했고 경고·깨진 로컬 링크 0건, 복사한 원본 24개와 프로젝트 메타데이터 보존을 확인했다. 실행 파일은 4,883,456바이트다. 이는 CLI 연결 검증이며 최신 스킬의 모델 선택·실행이나 문서 자동 변경 검증이 아니다.
+
+## 한계와 후속 검증
+
+Windows x64·Rust 1.90 MSVC 환경을 확인했다. Antigravity 앱 내 발견·실행, Codex 모델의 실제 스킬 실행, 각 도구 UI 메뉴, macOS·ARM64·공개 릴리스 배포·업데이트는 미검증이다. Claude JSONL은 안정적인 공식 API가 아니며 미검증 형식·큐 전달/압축·깨진 줄은 경고로 드러낸다. 원문 입력 형식이 바뀌면 새 독립 자료를 추가해야 한다.
+
+전경 주기 수집·수집 종료·재시작 복구를 검증하며 데스크톱 상주·훅·문서 재구조화·분석·사용자 테스트의 완료를 주장하지 않는다. 현재 전체 재조회 비용과 장시간 많은 프로젝트를 관찰하는 성능은 후속 범위다.
+
+문서 조회는 규칙 기반 후보 제공이며 의미 이해·자동 통합·재작성·삭제·문서 복구 구현의 검증이 아니다. HTML·위키 링크·앵커·제외한 원문에서의 역링크와 프로젝트 전체의 원자적 스냅샷은 보장하지 않는다. 파일 수·입력 합계·전체 순회 상한은 방어 제한으로 구현하며 현재 자동 사례는 파일별 크기와 깊이 경계를 직접 검증한다. Windows 대소문자 링크 사례는 Windows 전용이며 다른 OS의 동작 검증을 뜻하지 않는다.

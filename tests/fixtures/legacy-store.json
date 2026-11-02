@@ -1,0 +1,60 @@
+{
+  "applicationId": 1397509707,
+  "userVersion": 1,
+  "schema": [
+    "CREATE TABLE projects (\n      project_id TEXT PRIMARY KEY, root_path TEXT NOT NULL UNIQUE, metadata TEXT NOT NULL, last_run TEXT\n    ) STRICT",
+    "CREATE TABLE records (\n      project_id TEXT NOT NULL REFERENCES projects(project_id), record_id TEXT NOT NULL,\n      revision TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY (project_id, record_id)\n    ) STRICT",
+    "CREATE TABLE revisions (\n      project_id TEXT NOT NULL REFERENCES projects(project_id), record_id TEXT NOT NULL,\n      revision TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY (project_id, record_id, revision)\n    ) STRICT",
+    "CREATE TABLE leases (project_id TEXT PRIMARY KEY, pid INTEGER NOT NULL, token TEXT NOT NULL) STRICT"
+  ],
+  "metadata": {
+    "schemaVersion": 1,
+    "id": "11111111-1111-4111-8111-111111111111",
+    "name": "silolink-db-contract-oqbpgl",
+    "createdAt": "2026-11-01T20:38:18.307Z"
+  },
+  "lastRun": {
+    "schemaVersion": 1,
+    "mode": "text-history",
+    "status": "success",
+    "project": {
+      "schemaVersion": 1,
+      "id": "11111111-1111-4111-8111-111111111111",
+      "name": "silolink-db-contract-oqbpgl",
+      "createdAt": "2026-11-01T20:38:18.307Z",
+      "rootPath": "__PROJECT_ROOT__"
+    },
+    "observedAt": "2026-11-02T01:00:00.000Z",
+    "sources": [
+      {
+        "provider": "claude",
+        "status": "success",
+        "warnings": [],
+        "omitted": {},
+        "error": null
+      }
+    ],
+    "recordCount": 1,
+    "changes": {
+      "added": 1,
+      "updated": 0,
+      "unchanged": 0
+    }
+  },
+  "records": [
+    {
+      "project_id": "11111111-1111-4111-8111-111111111111",
+      "record_id": "efe3e261d0cfd830ac29e5f9380b2d49337cf6f7586e45a64009047dd4c2382c",
+      "revision": "73065a13b486d8d266e2004698bd2f0ef0ac5d0a17c59b0564d7c58131aa2fde",
+      "payload": "{\"schemaVersion\":1,\"id\":\"efe3e261d0cfd830ac29e5f9380b2d49337cf6f7586e45a64009047dd4c2382c\",\"revision\":\"73065a13b486d8d266e2004698bd2f0ef0ac5d0a17c59b0564d7c58131aa2fde\",\"projectId\":\"11111111-1111-4111-8111-111111111111\",\"source\":{\"provider\":\"claude\",\"sessionId\":\"origin\",\"itemId\":\"one\",\"turnId\":null,\"sourceKind\":null},\"role\":\"user\",\"text\":\"legacy record\",\"textParts\":[\"legacy record\"],\"occurredAt\":\"2026-11-02T00:00:00.000Z\",\"timeBasis\":\"message\",\"observedAt\":\"2026-11-02T01:00:00.000Z\",\"phase\":null}"
+    }
+  ],
+  "revisions": [
+    {
+      "project_id": "11111111-1111-4111-8111-111111111111",
+      "record_id": "efe3e261d0cfd830ac29e5f9380b2d49337cf6f7586e45a64009047dd4c2382c",
+      "revision": "73065a13b486d8d266e2004698bd2f0ef0ac5d0a17c59b0564d7c58131aa2fde",
+      "payload": "{\"schemaVersion\":1,\"id\":\"efe3e261d0cfd830ac29e5f9380b2d49337cf6f7586e45a64009047dd4c2382c\",\"revision\":\"73065a13b486d8d266e2004698bd2f0ef0ac5d0a17c59b0564d7c58131aa2fde\",\"projectId\":\"11111111-1111-4111-8111-111111111111\",\"source\":{\"provider\":\"claude\",\"sessionId\":\"origin\",\"itemId\":\"one\",\"turnId\":null,\"sourceKind\":null},\"role\":\"user\",\"text\":\"legacy record\",\"textParts\":[\"legacy record\"],\"occurredAt\":\"2026-11-02T00:00:00.000Z\",\"timeBasis\":\"message\",\"observedAt\":\"2026-11-02T01:00:00.000Z\",\"phase\":null}"
+    }
+  ]
+}

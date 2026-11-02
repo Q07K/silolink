@@ -1,0 +1,2313 @@
+{
+  "sdkVersion": "0.3.316",
+  "projectId": "11111111-1111-4111-8111-111111111111",
+  "observedAt": "2026-11-02T01:00:00.000Z",
+  "cases": [
+    {
+      "name": "basic",
+      "sessionId": "11111111-1111-4111-8111-000000000001",
+      "raw": [
+        {
+          "uuid": "11111111-1111-4111-8111-000000000002",
+          "parentUuid": null,
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000001",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "first question"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000003",
+          "parentUuid": "11111111-1111-4111-8111-000000000002",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000001",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "answer"
+              }
+            ]
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000004",
+          "parentUuid": "11111111-1111-4111-8111-000000000003",
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000001",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "followup"
+          }
+        }
+      ],
+      "expected": {
+        "records": [
+          {
+            "schemaVersion": 1,
+            "id": "dfc52e82a2386caa7b30139fb38371c34e089a3d331c766392b92ed2bbd23b18",
+            "revision": "ced8e4f81ff95b6dcd9297a3f61732c1d39b974bf55303f858c4426452884b81",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000001",
+              "itemId": "11111111-1111-4111-8111-000000000002",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "first question",
+            "textParts": [
+              "first question"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "172eb11480c678e73c5fb056ce50c6e39fbdd7fa8961e1fd0cc1632628ed11dc",
+            "revision": "30b935c81528d895dcfcf3dd36b82fa3c555b9b3a7c1262caf01be08e1876cc4",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000001",
+              "itemId": "11111111-1111-4111-8111-000000000003",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "answer",
+            "textParts": [
+              "answer"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "4aee087d3ca9f5d2dc0a16af83a1ea81cab0ba3259f44af502d04920e0d19768",
+            "revision": "7e5014c97ff9ed38ae91e51bc871f1b84cca580c9df4578a1d1b33c58ce5a498",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000001",
+              "itemId": "11111111-1111-4111-8111-000000000004",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "followup",
+            "textParts": [
+              "followup"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          }
+        ],
+        "warnings": [],
+        "omitted": {}
+      }
+    },
+    {
+      "name": "branch",
+      "sessionId": "11111111-1111-4111-8111-000000000005",
+      "raw": [
+        {
+          "uuid": "11111111-1111-4111-8111-000000000006",
+          "parentUuid": null,
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000005",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "first question"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000007",
+          "parentUuid": "11111111-1111-4111-8111-000000000006",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000005",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "old answer"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000008",
+          "parentUuid": "11111111-1111-4111-8111-000000000007",
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000005",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "abandoned request"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000009",
+          "parentUuid": "11111111-1111-4111-8111-000000000006",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000005",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "new answer"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000010",
+          "parentUuid": "11111111-1111-4111-8111-000000000009",
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000005",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "selected request"
+          }
+        }
+      ],
+      "expected": {
+        "records": [
+          {
+            "schemaVersion": 1,
+            "id": "236f79c34609202543cfcfab7088132ba2fe2f7426afccacbc64356598499faf",
+            "revision": "ced8e4f81ff95b6dcd9297a3f61732c1d39b974bf55303f858c4426452884b81",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000005",
+              "itemId": "11111111-1111-4111-8111-000000000006",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "first question",
+            "textParts": [
+              "first question"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "681eda3fb843c2c27503c5066e1d3b020d1c27aa6946859eec8a2b450a372ade",
+            "revision": "d8951fba9306d88d7d9047b29a70054efcc2d188006e964015a19d737802b60b",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000005",
+              "itemId": "11111111-1111-4111-8111-000000000009",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "new answer",
+            "textParts": [
+              "new answer"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "102fd091d9d6a992b605fa56253a7aca8a20f166c86fdc4c24823261ca1c9d1c",
+            "revision": "c9ab8bd778894d997dcaf9fad9e7e32951694b96ee3d24f51b6cd703966b914c",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000005",
+              "itemId": "11111111-1111-4111-8111-000000000010",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "selected request",
+            "textParts": [
+              "selected request"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          }
+        ],
+        "warnings": [],
+        "omitted": {}
+      }
+    },
+    {
+      "name": "streamed-siblings",
+      "sessionId": "11111111-1111-4111-8111-000000000011",
+      "raw": [
+        {
+          "uuid": "11111111-1111-4111-8111-000000000012",
+          "parentUuid": null,
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000011",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "first question"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000013",
+          "parentUuid": "11111111-1111-4111-8111-000000000012",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000011",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "id": "msg-shared",
+            "content": [
+              {
+                "type": "text",
+                "text": "thinking text"
+              },
+              {
+                "type": "tool_use",
+                "id": "tool-one",
+                "name": "Read",
+                "input": {}
+              }
+            ]
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000014",
+          "parentUuid": "11111111-1111-4111-8111-000000000012",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000011",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "id": "msg-shared",
+            "content": [
+              {
+                "type": "text",
+                "text": "more text"
+              }
+            ]
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000015",
+          "parentUuid": "11111111-1111-4111-8111-000000000014",
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000011",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": [
+              {
+                "type": "tool_result",
+                "tool_use_id": "tool-one",
+                "content": "synthetic"
+              }
+            ]
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000016",
+          "parentUuid": "11111111-1111-4111-8111-000000000015",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000011",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "id": "msg-final",
+            "content": [
+              {
+                "type": "text",
+                "text": "final answer"
+              }
+            ]
+          }
+        }
+      ],
+      "expected": {
+        "records": [
+          {
+            "schemaVersion": 1,
+            "id": "41f3ab1e9e4ad6535d84058e15c46c85ad025532a8ead7fcccbfb0e5b1248d97",
+            "revision": "ced8e4f81ff95b6dcd9297a3f61732c1d39b974bf55303f858c4426452884b81",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000011",
+              "itemId": "11111111-1111-4111-8111-000000000012",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "first question",
+            "textParts": [
+              "first question"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "04c8e1fbd57c5743c027bd518bfccc0580c18125d208cfadd3f4a16b5184143d",
+            "revision": "5e2300eda401c6e691441f1aab2eb8b75a002ade18208a9a0c0acaf61b61169c",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000011",
+              "itemId": "11111111-1111-4111-8111-000000000014",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "more text",
+            "textParts": [
+              "more text"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "230b612833f7b5b8f10a5986f07249174dafa89e486a349493ea9197666af7ec",
+            "revision": "1b6404d49ebf805a624f9776f5a9375f3a59b9fd09328c5fa7ac0aff66b6a51a",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000011",
+              "itemId": "11111111-1111-4111-8111-000000000013",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "thinking text",
+            "textParts": [
+              "thinking text"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "e0180b500d17a3e69f88cc21eae9ee61ffeca835a77727411be64ba3368d9127",
+            "revision": "04d1179331f1998967d7dd6bdc2462cdf40c7d719360318d19e7f8dfb6a4bb4e",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000011",
+              "itemId": "11111111-1111-4111-8111-000000000016",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "final answer",
+            "textParts": [
+              "final answer"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          }
+        ],
+        "warnings": [],
+        "omitted": {
+          "tool_use": 1,
+          "tool_result": 1,
+          "noText": 1
+        }
+      }
+    },
+    {
+      "name": "meta-and-sidechain",
+      "sessionId": "11111111-1111-4111-8111-000000000017",
+      "raw": [
+        {
+          "uuid": "11111111-1111-4111-8111-000000000018",
+          "parentUuid": null,
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000017",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "first question"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000019",
+          "parentUuid": "11111111-1111-4111-8111-000000000018",
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000017",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "metadata-only instruction"
+          },
+          "isMeta": true
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000020",
+          "parentUuid": "11111111-1111-4111-8111-000000000019",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000017",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "visible answer"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000021",
+          "parentUuid": "11111111-1111-4111-8111-000000000020",
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000017",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": true,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "subagent request"
+          }
+        }
+      ],
+      "expected": {
+        "records": [
+          {
+            "schemaVersion": 1,
+            "id": "7ab3b5bf7621532e486eb6beb0e03e5c790710e6205c166cbf2f7588f0055862",
+            "revision": "ced8e4f81ff95b6dcd9297a3f61732c1d39b974bf55303f858c4426452884b81",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000017",
+              "itemId": "11111111-1111-4111-8111-000000000018",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "first question",
+            "textParts": [
+              "first question"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "8fc091a752ea8c60c7f90fa68e7d8b2f364122c05221088a47041d1be2697ef2",
+            "revision": "a2d55c85cd67bd4f213487e21542bdb1b8eb479fd40a1cd234980bb540ed4584",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000017",
+              "itemId": "11111111-1111-4111-8111-000000000020",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "visible answer",
+            "textParts": [
+              "visible answer"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          }
+        ],
+        "warnings": [],
+        "omitted": {}
+      }
+    },
+    {
+      "name": "compaction",
+      "sessionId": "11111111-1111-4111-8111-000000000022",
+      "raw": [
+        {
+          "uuid": "11111111-1111-4111-8111-000000000023",
+          "parentUuid": null,
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000022",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "first question"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000024",
+          "parentUuid": "11111111-1111-4111-8111-000000000023",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000022",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "old answer"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000025",
+          "parentUuid": "11111111-1111-4111-8111-000000000024",
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000022",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "preserved question"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000026",
+          "parentUuid": "11111111-1111-4111-8111-000000000025",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000022",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "preserved answer"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000027",
+          "parentUuid": null,
+          "type": "system",
+          "sessionId": "11111111-1111-4111-8111-000000000022",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "system",
+            "content": null
+          },
+          "subtype": "compact_boundary",
+          "compactMetadata": {
+            "preservedMessages": {
+              "anchorUuid": "11111111-1111-4111-8111-000000000027",
+              "uuids": [
+                "11111111-1111-4111-8111-000000000025",
+                "11111111-1111-4111-8111-000000000026"
+              ]
+            }
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000028",
+          "parentUuid": "11111111-1111-4111-8111-000000000027",
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000022",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "summary"
+          },
+          "isCompactSummary": true
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000029",
+          "parentUuid": "11111111-1111-4111-8111-000000000028",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000022",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "after compact"
+          }
+        }
+      ],
+      "expected": {
+        "records": [
+          {
+            "schemaVersion": 1,
+            "id": "e780e8fca3d11ad4efe46110c609e61e6a40c23260fdf51b1ade19cde86c1095",
+            "revision": "a1df8e20009646a3e397d2bd31889d4e9b67b0c13e468e5be18a712cd30fb037",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000022",
+              "itemId": "11111111-1111-4111-8111-000000000025",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "preserved question",
+            "textParts": [
+              "preserved question"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "66ba50d2927e4c809e1de85245e6fe666891def95637cab1496285830aecf12b",
+            "revision": "1aef384d8e905c6f60281903be23609fe4329508d439d36c938922ae55d1fe51",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000022",
+              "itemId": "11111111-1111-4111-8111-000000000026",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "preserved answer",
+            "textParts": [
+              "preserved answer"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "64be16201be108b08d3dd210e249b1693ea95f589e107d48209bca49284de13e",
+            "revision": "5e7ca4278d77edf79c51a49adf81f4dff9674941feeac9bc2f257229fe48eb88",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000022",
+              "itemId": "11111111-1111-4111-8111-000000000028",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "summary",
+            "textParts": [
+              "summary"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "ea178a02481c3733d147f4cd1b11b651d3dd89e38ab5c71c94dce3d2d27b533d",
+            "revision": "63f429cce0558b109f2580747032866e85be2fb43f3d20a1ca86bb163c0b233f",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000022",
+              "itemId": "11111111-1111-4111-8111-000000000029",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "after compact",
+            "textParts": [
+              "after compact"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          }
+        ],
+        "warnings": [],
+        "omitted": {}
+      }
+    },
+    {
+      "name": "queued",
+      "sessionId": "11111111-1111-4111-8111-000000000030",
+      "raw": [
+        {
+          "uuid": "11111111-1111-4111-8111-000000000031",
+          "parentUuid": null,
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000030",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "first question"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000032",
+          "parentUuid": "11111111-1111-4111-8111-000000000031",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000030",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "first answer"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000034",
+          "parentUuid": "11111111-1111-4111-8111-000000000032",
+          "type": "attachment",
+          "sessionId": "11111111-1111-4111-8111-000000000030",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "attachment",
+            "content": null
+          },
+          "attachment": {
+            "type": "queued_command",
+            "prompt": "queued request",
+            "source_uuid": "11111111-1111-4111-8111-000000000033",
+            "isMeta": false
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000035",
+          "parentUuid": "11111111-1111-4111-8111-000000000034",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000030",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "queued answer"
+          }
+        }
+      ],
+      "expected": {
+        "records": [
+          {
+            "schemaVersion": 1,
+            "id": "2dea90b33ff65dd48b8de3ab8d148a0d7dbe7482e7d87c1f97a007ee21786947",
+            "revision": "ced8e4f81ff95b6dcd9297a3f61732c1d39b974bf55303f858c4426452884b81",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000030",
+              "itemId": "11111111-1111-4111-8111-000000000031",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "first question",
+            "textParts": [
+              "first question"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "05dbd9459368fdfea6231eca356f7c0ac92eb7a0c6517021cd03ced6089e3998",
+            "revision": "df2ee8e8740e978383046b1e89671c83d8ecc9bac384156d87c39051ccb73d9d",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000030",
+              "itemId": "11111111-1111-4111-8111-000000000032",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "first answer",
+            "textParts": [
+              "first answer"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "ec6d222507b563537535cbe698b012df3cdb2a53065334e3695a648829a9f2cb",
+            "revision": "8b1959a9a8610c20219950f3c240917aab20ae00e67a3480a8b35965f7ef1630",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000030",
+              "itemId": "11111111-1111-4111-8111-000000000033",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "queued request",
+            "textParts": [
+              "queued request"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "c082f34dc9a99b79c4f8bc0b119027b19bb608824feee661c7d6bdc4636fb211",
+            "revision": "a28ca567df03ff08880442b18e291963a69eeb20bd7325d29ac7d6c793a9b6f5",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000030",
+              "itemId": "11111111-1111-4111-8111-000000000035",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "queued answer",
+            "textParts": [
+              "queued answer"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          }
+        ],
+        "warnings": [],
+        "omitted": {}
+      }
+    },
+    {
+      "name": "pending-queued",
+      "sessionId": "11111111-1111-4111-8111-000000000036",
+      "raw": [
+        {
+          "uuid": "11111111-1111-4111-8111-000000000037",
+          "parentUuid": null,
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000036",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "first question"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000038",
+          "parentUuid": "11111111-1111-4111-8111-000000000037",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000036",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "first answer"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000040",
+          "parentUuid": "11111111-1111-4111-8111-000000000038",
+          "type": "attachment",
+          "sessionId": "11111111-1111-4111-8111-000000000036",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "attachment",
+            "content": null
+          },
+          "attachment": {
+            "type": "queued_command",
+            "prompt": "queued request",
+            "source_uuid": "11111111-1111-4111-8111-000000000039",
+            "isMeta": false
+          }
+        }
+      ],
+      "expected": {
+        "records": [
+          {
+            "schemaVersion": 1,
+            "id": "65fabc15b15dff651e363847fdba1bdd90d9ca307faee304a9daed080ced0c8d",
+            "revision": "ced8e4f81ff95b6dcd9297a3f61732c1d39b974bf55303f858c4426452884b81",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000036",
+              "itemId": "11111111-1111-4111-8111-000000000037",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "first question",
+            "textParts": [
+              "first question"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "aa710555b047c5e100c932946dc4bbf50f2e6b246a381eb494ee270f8b643e43",
+            "revision": "df2ee8e8740e978383046b1e89671c83d8ecc9bac384156d87c39051ccb73d9d",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000036",
+              "itemId": "11111111-1111-4111-8111-000000000038",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "first answer",
+            "textParts": [
+              "first answer"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "364eacc7a0ac4578363eb08bde30afb537ae477a126d925fdc537b7b2db1faf3",
+            "revision": "8b1959a9a8610c20219950f3c240917aab20ae00e67a3480a8b35965f7ef1630",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000036",
+              "itemId": "11111111-1111-4111-8111-000000000039",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "queued request",
+            "textParts": [
+              "queued request"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          }
+        ],
+        "warnings": [],
+        "omitted": {}
+      }
+    },
+    {
+      "name": "duplicate-queued",
+      "sessionId": "11111111-1111-4111-8111-000000000041",
+      "raw": [
+        {
+          "uuid": "11111111-1111-4111-8111-000000000042",
+          "parentUuid": null,
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000041",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "first question"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000043",
+          "parentUuid": "11111111-1111-4111-8111-000000000042",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000041",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "first answer"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000044",
+          "parentUuid": "11111111-1111-4111-8111-000000000043",
+          "type": "attachment",
+          "sessionId": "11111111-1111-4111-8111-000000000041",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "attachment",
+            "content": null
+          },
+          "attachment": {
+            "type": "queued_command",
+            "prompt": "queued request",
+            "source_uuid": "11111111-1111-4111-8111-000000000042",
+            "isMeta": false
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000045",
+          "parentUuid": "11111111-1111-4111-8111-000000000044",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000041",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "queued answer"
+          }
+        }
+      ],
+      "expected": {
+        "records": [
+          {
+            "schemaVersion": 1,
+            "id": "b184b83cbcce8c9f5c14ccfb7a095a7fd32b79ffcf6fd32d259a12238b62e2d2",
+            "revision": "ced8e4f81ff95b6dcd9297a3f61732c1d39b974bf55303f858c4426452884b81",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000041",
+              "itemId": "11111111-1111-4111-8111-000000000042",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "first question",
+            "textParts": [
+              "first question"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "001531cbcad7573cd8c16a57a5f18914e94b29503545471a20ce51b1a296e750",
+            "revision": "df2ee8e8740e978383046b1e89671c83d8ecc9bac384156d87c39051ccb73d9d",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000041",
+              "itemId": "11111111-1111-4111-8111-000000000043",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "first answer",
+            "textParts": [
+              "first answer"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "5f3b70643b1abc75c3014c28cd12b7bdd249a23ba44f137f0f297993b64764d7",
+            "revision": "a28ca567df03ff08880442b18e291963a69eeb20bd7325d29ac7d6c793a9b6f5",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000041",
+              "itemId": "11111111-1111-4111-8111-000000000045",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "queued answer",
+            "textParts": [
+              "queued answer"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          }
+        ],
+        "warnings": [],
+        "omitted": {}
+      }
+    },
+    {
+      "name": "meta-queued",
+      "sessionId": "11111111-1111-4111-8111-000000000046",
+      "raw": [
+        {
+          "uuid": "11111111-1111-4111-8111-000000000047",
+          "parentUuid": null,
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000046",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "first question"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000048",
+          "parentUuid": "11111111-1111-4111-8111-000000000047",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000046",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "first answer"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000050",
+          "parentUuid": "11111111-1111-4111-8111-000000000048",
+          "type": "attachment",
+          "sessionId": "11111111-1111-4111-8111-000000000046",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "attachment",
+            "content": null
+          },
+          "attachment": {
+            "type": "queued_command",
+            "prompt": "queued request",
+            "source_uuid": "11111111-1111-4111-8111-000000000049",
+            "isMeta": true
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000051",
+          "parentUuid": "11111111-1111-4111-8111-000000000050",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000046",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "queued answer"
+          }
+        }
+      ],
+      "expected": {
+        "records": [
+          {
+            "schemaVersion": 1,
+            "id": "9d870f6ab88777a615b2cbbf2651e8ed99f59f82b87ee6c10630fe715ce65e70",
+            "revision": "ced8e4f81ff95b6dcd9297a3f61732c1d39b974bf55303f858c4426452884b81",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000046",
+              "itemId": "11111111-1111-4111-8111-000000000047",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "first question",
+            "textParts": [
+              "first question"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "2b5619f9be80e603d8b6a18b205062bd067db2d157c634b93cb8966bb2b92d47",
+            "revision": "df2ee8e8740e978383046b1e89671c83d8ecc9bac384156d87c39051ccb73d9d",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000046",
+              "itemId": "11111111-1111-4111-8111-000000000048",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "first answer",
+            "textParts": [
+              "first answer"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "e106b610dbd16c588b7f7a00102258b40401a76be393d9ea0c91be6acc59df30",
+            "revision": "a28ca567df03ff08880442b18e291963a69eeb20bd7325d29ac7d6c793a9b6f5",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000046",
+              "itemId": "11111111-1111-4111-8111-000000000051",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "queued answer",
+            "textParts": [
+              "queued answer"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          }
+        ],
+        "warnings": [],
+        "omitted": {}
+      }
+    },
+    {
+      "name": "channel-user",
+      "sessionId": "11111111-1111-4111-8111-000000000052",
+      "raw": [
+        {
+          "uuid": "11111111-1111-4111-8111-000000000053",
+          "parentUuid": null,
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000052",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "first question"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000054",
+          "parentUuid": "11111111-1111-4111-8111-000000000053",
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000052",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "channel request"
+          },
+          "isMeta": true,
+          "origin": {
+            "kind": "channel"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000055",
+          "parentUuid": "11111111-1111-4111-8111-000000000054",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000052",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "channel answer"
+          }
+        }
+      ],
+      "expected": {
+        "records": [
+          {
+            "schemaVersion": 1,
+            "id": "9ba599882bfa96be8c08c299a96b6ba5adad6a0c3b95ea8ba98a3f66abbc215a",
+            "revision": "ced8e4f81ff95b6dcd9297a3f61732c1d39b974bf55303f858c4426452884b81",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000052",
+              "itemId": "11111111-1111-4111-8111-000000000053",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "first question",
+            "textParts": [
+              "first question"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "3b7efb75752a91472bd675fc1b6dc899344e1a350dcd14563e5fd65dbf34f50b",
+            "revision": "8bcf4d528bccd5010bc77d21a4daca89056d8176bde6e835f0f7e2457b7afc34",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000052",
+              "itemId": "11111111-1111-4111-8111-000000000054",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "channel request",
+            "textParts": [
+              "channel request"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "303ed8778e7352f8334278d13466a5b29c06bb4f38483908b7c5d6c5fb15a8af",
+            "revision": "890806edbcc813a72c66ced09ce45c82221cdd7d8d06baa9d3d7918a058c2564",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000052",
+              "itemId": "11111111-1111-4111-8111-000000000055",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "channel answer",
+            "textParts": [
+              "channel answer"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          }
+        ],
+        "warnings": [],
+        "omitted": {}
+      }
+    },
+    {
+      "name": "delivery-without-receipt",
+      "sessionId": "11111111-1111-4111-8111-000000000056",
+      "raw": [
+        {
+          "uuid": "11111111-1111-4111-8111-000000000057",
+          "parentUuid": null,
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000056",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "first question"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000058",
+          "parentUuid": "11111111-1111-4111-8111-000000000057",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000056",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "answer before queue"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000060",
+          "parentUuid": "11111111-1111-4111-8111-000000000058",
+          "type": "attachment",
+          "sessionId": "11111111-1111-4111-8111-000000000056",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "attachment",
+            "content": null
+          },
+          "attachment": {
+            "type": "queued_command",
+            "prompt": "delivered request",
+            "source_uuid": "11111111-1111-4111-8111-000000000059",
+            "delivery_id": "delivery-fixture"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000061",
+          "parentUuid": "11111111-1111-4111-8111-000000000060",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000056",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "delivered answer"
+          }
+        }
+      ],
+      "expected": {
+        "records": [
+          {
+            "schemaVersion": 1,
+            "id": "ed1fcc439e16c4b0e2abe46d5d78f714cc2c03e4f5b55e3f1ed05c46736f3393",
+            "revision": "ced8e4f81ff95b6dcd9297a3f61732c1d39b974bf55303f858c4426452884b81",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000056",
+              "itemId": "11111111-1111-4111-8111-000000000057",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "first question",
+            "textParts": [
+              "first question"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "5a8303bec96926f3ca2f5e20e5bab915a9ff611a7ba703527d3c10195eae30a6",
+            "revision": "d5928d8271298f4e708c935dc51d976a2dc5b32937b35cbc4540844112a5a0c4",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000056",
+              "itemId": "11111111-1111-4111-8111-000000000058",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "answer before queue",
+            "textParts": [
+              "answer before queue"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "f5b5b6aa5faea2163512c56d5899ccaa9350f2a0247e5615201ad9d0e64bfa04",
+            "revision": "0775601c8d5bb0c05bfe8e24bb5317a74053ba9b4ea9374d6c7b9359964f509a",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000056",
+              "itemId": "11111111-1111-4111-8111-000000000059",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "delivered request",
+            "textParts": [
+              "delivered request"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "634b31618e10da012236e5cafa1a522a8abf99ac0bd79ed82c1b310f294b2908",
+            "revision": "2b64045228f109d8227434323c4b33d751778d9b9a77b6cd0fae6eadc6c9e70e",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000056",
+              "itemId": "11111111-1111-4111-8111-000000000061",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "delivered answer",
+            "textParts": [
+              "delivered answer"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          }
+        ],
+        "warnings": [],
+        "omitted": {}
+      }
+    },
+    {
+      "name": "delivery-receipt",
+      "sessionId": "11111111-1111-4111-8111-000000000062",
+      "raw": [
+        {
+          "uuid": "11111111-1111-4111-8111-000000000063",
+          "parentUuid": null,
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000062",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "first question"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000064",
+          "parentUuid": "11111111-1111-4111-8111-000000000063",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000062",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "answer before queue"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000066",
+          "parentUuid": "11111111-1111-4111-8111-000000000064",
+          "type": "attachment",
+          "sessionId": "11111111-1111-4111-8111-000000000062",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "attachment",
+            "content": null
+          },
+          "attachment": {
+            "type": "queued_command",
+            "prompt": "delivered request",
+            "source_uuid": "11111111-1111-4111-8111-000000000065",
+            "delivery_id": "delivery-fixture"
+          }
+        },
+        {
+          "type": "queue-operation",
+          "operation": "remove",
+          "reason": "absorbed_mid_turn",
+          "deliveryId": "delivery-fixture",
+          "cwd": "__PROJECT_ROOT__"
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000067",
+          "parentUuid": "11111111-1111-4111-8111-000000000066",
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000062",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "separate prompt"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000068",
+          "parentUuid": "11111111-1111-4111-8111-000000000067",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000062",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "reply to separate prompt"
+          }
+        }
+      ],
+      "expected": {
+        "records": [
+          {
+            "schemaVersion": 1,
+            "id": "a8823f6b87fdfc3d5d0e06f38ff4c4f646100c7637bc1bf91450171527e495de",
+            "revision": "ced8e4f81ff95b6dcd9297a3f61732c1d39b974bf55303f858c4426452884b81",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000062",
+              "itemId": "11111111-1111-4111-8111-000000000063",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "first question",
+            "textParts": [
+              "first question"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "692065f0e64f386c281b36c0ad429ff27b30be8f9ff8f69d0cbaded4ded53d69",
+            "revision": "d5928d8271298f4e708c935dc51d976a2dc5b32937b35cbc4540844112a5a0c4",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000062",
+              "itemId": "11111111-1111-4111-8111-000000000064",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "answer before queue",
+            "textParts": [
+              "answer before queue"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "ba39d405baa97ac5f1dbc0824343221af6ce60f7c0a573ffc32df77e5b30d6ae",
+            "revision": "0775601c8d5bb0c05bfe8e24bb5317a74053ba9b4ea9374d6c7b9359964f509a",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000062",
+              "itemId": "11111111-1111-4111-8111-000000000065",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "delivered request",
+            "textParts": [
+              "delivered request"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "30fa9b9ef81b2bf40ba884054ab73f01fc4809345f24d5c12f724169cef75462",
+            "revision": "1cc8714abca374f8d0ab2dd25241d3471c92e3e6d8cf53394bee2487507bccf3",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000062",
+              "itemId": "11111111-1111-4111-8111-000000000067",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "separate prompt",
+            "textParts": [
+              "separate prompt"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "aed8e841907a0d7951c4b92a55a68076765d41843ede50b7154e0987d5b4579b",
+            "revision": "82cc448e4d33623951907f96c6ec04a886a0b48e0e66e977a782c6aac725cfa4",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000062",
+              "itemId": "11111111-1111-4111-8111-000000000068",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "reply to separate prompt",
+            "textParts": [
+              "reply to separate prompt"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          }
+        ],
+        "warnings": [],
+        "omitted": {}
+      }
+    },
+    {
+      "name": "delivery-copies",
+      "sessionId": "11111111-1111-4111-8111-000000000069",
+      "raw": [
+        {
+          "uuid": "11111111-1111-4111-8111-000000000070",
+          "parentUuid": null,
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000069",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "first question"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000071",
+          "parentUuid": "11111111-1111-4111-8111-000000000070",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000069",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "answer before queue"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000073",
+          "parentUuid": "11111111-1111-4111-8111-000000000071",
+          "type": "attachment",
+          "sessionId": "11111111-1111-4111-8111-000000000069",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "attachment",
+            "content": null
+          },
+          "attachment": {
+            "type": "queued_command",
+            "prompt": "delivered request",
+            "source_uuid": "11111111-1111-4111-8111-000000000072",
+            "delivery_id": "delivery-fixture"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000074",
+          "parentUuid": "11111111-1111-4111-8111-000000000073",
+          "type": "attachment",
+          "sessionId": "11111111-1111-4111-8111-000000000069",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "attachment",
+            "content": null
+          },
+          "attachment": {
+            "type": "queued_command",
+            "prompt": "delivered request",
+            "source_uuid": "11111111-1111-4111-8111-000000000072",
+            "delivery_id": "delivery-fixture"
+          }
+        },
+        {
+          "type": "queue-operation",
+          "operation": "remove",
+          "reason": "absorbed_mid_turn",
+          "deliveryId": "delivery-fixture",
+          "cwd": "__PROJECT_ROOT__"
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000075",
+          "parentUuid": "11111111-1111-4111-8111-000000000074",
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000069",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "separate prompt"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000076",
+          "parentUuid": "11111111-1111-4111-8111-000000000075",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000069",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "reply to separate prompt"
+          }
+        }
+      ],
+      "expected": {
+        "records": [
+          {
+            "schemaVersion": 1,
+            "id": "d1de0e5dce4f2fd2ce932d9b305d2e654a148f8aef52956befedb8f97e38d853",
+            "revision": "ced8e4f81ff95b6dcd9297a3f61732c1d39b974bf55303f858c4426452884b81",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000069",
+              "itemId": "11111111-1111-4111-8111-000000000070",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "first question",
+            "textParts": [
+              "first question"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "f307729665625ef55429ca82f06431684528406a82c3626257dcb65d6383ea9d",
+            "revision": "d5928d8271298f4e708c935dc51d976a2dc5b32937b35cbc4540844112a5a0c4",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000069",
+              "itemId": "11111111-1111-4111-8111-000000000071",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "answer before queue",
+            "textParts": [
+              "answer before queue"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "c39542173e8234291eba2425100d79f11a0e3a120b378df5ffe00fd20b5a146c",
+            "revision": "0775601c8d5bb0c05bfe8e24bb5317a74053ba9b4ea9374d6c7b9359964f509a",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000069",
+              "itemId": "11111111-1111-4111-8111-000000000072",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "delivered request",
+            "textParts": [
+              "delivered request"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "52201ae5d309ca234439709346dc5b3b94b4711d5414ff9e19b4c675d2284094",
+            "revision": "1cc8714abca374f8d0ab2dd25241d3471c92e3e6d8cf53394bee2487507bccf3",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000069",
+              "itemId": "11111111-1111-4111-8111-000000000075",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "separate prompt",
+            "textParts": [
+              "separate prompt"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "222e61caeb8d934d232969b3995dd739335d47119c23c9df7cdef7f73b74a94f",
+            "revision": "82cc448e4d33623951907f96c6ec04a886a0b48e0e66e977a782c6aac725cfa4",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000069",
+              "itemId": "11111111-1111-4111-8111-000000000076",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "reply to separate prompt",
+            "textParts": [
+              "reply to separate prompt"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          }
+        ],
+        "warnings": [],
+        "omitted": {}
+      }
+    },
+    {
+      "name": "source-receipt",
+      "sessionId": "11111111-1111-4111-8111-000000000077",
+      "raw": [
+        {
+          "uuid": "11111111-1111-4111-8111-000000000078",
+          "parentUuid": null,
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000077",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "first question"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000079",
+          "parentUuid": "11111111-1111-4111-8111-000000000078",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000077",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "answer before queue"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000081",
+          "parentUuid": "11111111-1111-4111-8111-000000000079",
+          "type": "attachment",
+          "sessionId": "11111111-1111-4111-8111-000000000077",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "attachment",
+            "content": null
+          },
+          "attachment": {
+            "type": "queued_command",
+            "prompt": "delivered request",
+            "source_uuid": "11111111-1111-4111-8111-000000000080"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000082",
+          "parentUuid": "11111111-1111-4111-8111-000000000081",
+          "type": "attachment",
+          "sessionId": "11111111-1111-4111-8111-000000000077",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "attachment",
+            "content": null
+          },
+          "attachment": {
+            "type": "queued_command",
+            "prompt": "delivered request",
+            "source_uuid": "11111111-1111-4111-8111-000000000080"
+          }
+        },
+        {
+          "type": "queue-operation",
+          "operation": "remove",
+          "reason": "absorbed_mid_turn",
+          "commandUuid": "11111111-1111-4111-8111-000000000080",
+          "cwd": "__PROJECT_ROOT__"
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000083",
+          "parentUuid": "11111111-1111-4111-8111-000000000082",
+          "type": "user",
+          "sessionId": "11111111-1111-4111-8111-000000000077",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "user",
+            "content": "separate prompt"
+          }
+        },
+        {
+          "uuid": "11111111-1111-4111-8111-000000000084",
+          "parentUuid": "11111111-1111-4111-8111-000000000083",
+          "type": "assistant",
+          "sessionId": "11111111-1111-4111-8111-000000000077",
+          "cwd": "__PROJECT_ROOT__",
+          "version": "2.1.292",
+          "isSidechain": false,
+          "timestamp": "2026-11-02T00:00:00Z",
+          "message": {
+            "role": "assistant",
+            "content": "reply to separate prompt"
+          }
+        }
+      ],
+      "expected": {
+        "records": [
+          {
+            "schemaVersion": 1,
+            "id": "dbe36cb42a8ded6e1ea4705792011266afdf78909927ad0e5d248fb93c9449d2",
+            "revision": "ced8e4f81ff95b6dcd9297a3f61732c1d39b974bf55303f858c4426452884b81",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000077",
+              "itemId": "11111111-1111-4111-8111-000000000078",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "first question",
+            "textParts": [
+              "first question"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "3d7f4af8ef2f433b330e95cea5a0c5676dce6cda65138c6e7c68f5626bc4bda6",
+            "revision": "d5928d8271298f4e708c935dc51d976a2dc5b32937b35cbc4540844112a5a0c4",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000077",
+              "itemId": "11111111-1111-4111-8111-000000000079",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "answer before queue",
+            "textParts": [
+              "answer before queue"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "237cb615d1b0de97448281190c052678c87986f6072e917de2866923d4d499c1",
+            "revision": "0775601c8d5bb0c05bfe8e24bb5317a74053ba9b4ea9374d6c7b9359964f509a",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000077",
+              "itemId": "11111111-1111-4111-8111-000000000080",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "delivered request",
+            "textParts": [
+              "delivered request"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "b297decc6bc7c8654cdfbcfe39cfaafd97ac1e28e2cd164c1ac202a3b75b8bae",
+            "revision": "1cc8714abca374f8d0ab2dd25241d3471c92e3e6d8cf53394bee2487507bccf3",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000077",
+              "itemId": "11111111-1111-4111-8111-000000000083",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "user",
+            "text": "separate prompt",
+            "textParts": [
+              "separate prompt"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          },
+          {
+            "schemaVersion": 1,
+            "id": "953a40fc354bc6ecc3436ab5b1ae03c4483cbd1847059db77fef6dde01458d47",
+            "revision": "82cc448e4d33623951907f96c6ec04a886a0b48e0e66e977a782c6aac725cfa4",
+            "projectId": "11111111-1111-4111-8111-111111111111",
+            "source": {
+              "provider": "claude",
+              "sessionId": "11111111-1111-4111-8111-000000000077",
+              "itemId": "11111111-1111-4111-8111-000000000084",
+              "turnId": null,
+              "sourceKind": null
+            },
+            "role": "assistant",
+            "text": "reply to separate prompt",
+            "textParts": [
+              "reply to separate prompt"
+            ],
+            "occurredAt": "2026-11-02T00:00:00.000Z",
+            "timeBasis": "message",
+            "observedAt": "2026-11-02T01:00:00.000Z",
+            "phase": null
+          }
+        ],
+        "warnings": [],
+        "omitted": {}
+      }
+    }
+  ]
+}
