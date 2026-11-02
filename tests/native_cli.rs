@@ -11,6 +11,7 @@ fn run(args: &[&str], cwd: &Path) -> Output {
         .args(args)
         .current_dir(cwd)
         .env_remove("SILOLINK_STATE_DIR")
+        .env("SILOLINK_PROJECT_REGISTRY_DIR", cwd.join(".registry"))
         .output()
         .unwrap()
 }
@@ -75,6 +76,16 @@ fn native_init_is_repeatable_and_preserves_existing_documents() {
     assert_eq!(a["created"], true);
     assert_eq!(b["created"], false);
     assert_eq!(a["project"]["id"], b["project"]["id"]);
+    let registration = temp
+        .path()
+        .join(".registry")
+        .join(format!("{}.json", a["project"]["id"].as_str().unwrap()));
+    let registered: Value = serde_json::from_slice(&fs::read(registration).unwrap()).unwrap();
+    assert_eq!(registered["root"], a["project"]["rootPath"]);
+    assert_eq!(
+        fs::read_dir(temp.path().join(".registry")).unwrap().count(),
+        1
+    );
     assert_eq!(
         fs::read_to_string(temp.path().join("notes.md")).unwrap(),
         "# Keep\n"

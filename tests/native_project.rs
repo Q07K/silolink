@@ -98,6 +98,10 @@ fn concurrent_native_initializers_keep_one_identity_and_busy_callers_can_retry()
         Command::new(env!("CARGO_BIN_EXE_silolink"))
             .arg("init")
             .current_dir(root.path())
+            .env(
+                "SILOLINK_PROJECT_REGISTRY_DIR",
+                root.path().join("registry"),
+            )
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()

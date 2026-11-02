@@ -1,5 +1,5 @@
 use crate::{
-    error::Result,
+    error::{Error, Result},
     project::{self, Project},
 };
 use ignore::{IncrementalIgnore, WalkBuilder};
@@ -34,6 +34,71 @@ const EXCLUDED_DIRECTORIES: &[&str] = &[
     "venv",
     ".next",
 ];
+
+/// Read a document from the same inventory exposed by `scan`, preserving its scope.
+pub fn read(project: &Project, path: &str, expected_revision: Option<&str>) -> Result<Value> {
+    let relative = Path::new(path);
+    if path.is_empty()
+        || path.contains('\\')
+        || relative
+            .components()
+            .any(|c| !matches!(c, Component::Normal(_)))
+    {
+        return Err(Error::new(
+            "DOCUMENT_OUT_OF_SCOPE",
+            "Choose a document in this project.",
+        ));
+    }
+    let inventory = scan(project)?;
+    let document = inventory["documents"]
+        .as_array()
+        .and_then(|items| {
+            items
+                .iter()
+                .find(|item| item["path"].as_str() == Some(path))
+        })
+        .ok_or_else(|| {
+            Error::new(
+                "DOCUMENT_OUT_OF_SCOPE",
+                "This document is excluded, missing, or outside the project.",
+            )
+        })?;
+    let mut filename = project.root.clone();
+    for part in relative.components() {
+        filename.push(part);
+        if project::linked(&filename)
+            .map_err(|e| Error::io("DOCUMENT_READ_FAILED", "Cannot inspect the document.", &e))?
+        {
+            return Err(Error::new(
+                "DOCUMENT_OUT_OF_SCOPE",
+                "Linked document paths are not read.",
+            ));
+        }
+    }
+    let mut bytes = Vec::new();
+    File::open(&filename)
+        .and_then(|file| file.take(MAX_FILE_BYTES + 1).read_to_end(&mut bytes))
+        .map_err(|e| Error::io("DOCUMENT_READ_FAILED", "Cannot read the document.", &e))?;
+    if bytes.len() as u64 > MAX_FILE_BYTES {
+        return Err(Error::new(
+            "DOCUMENT_TOO_LARGE",
+            "The document exceeds the reading limit.",
+        ));
+    }
+    let revision = hash(&bytes);
+    if document["revision"] != revision || expected_revision.is_some_and(|r| r != revision) {
+        return Err(Error::new(
+            "DOCUMENT_REVISION_CONFLICT",
+            "The document changed; refresh it before continuing.",
+        ));
+    }
+    let text = String::from_utf8(bytes)
+        .map_err(|_| Error::new("DOCUMENT_INVALID_UTF8", "The document is not valid UTF-8."))?;
+    let mut result = document.clone();
+    result["text"] = json!(text);
+    result["projectId"] = json!(project.id());
+    Ok(result)
+}
 
 #[derive(Serialize)]
 struct Heading {

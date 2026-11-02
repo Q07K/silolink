@@ -1,0 +1,36 @@
+import type { Snapshot } from "./types";
+export const emptySnapshot: Snapshot = {
+  workspace: {
+    schemaVersion: 1,
+    settings: {
+      stateDirectory: null,
+      reviewTime: "20:30",
+      reviewWeekday: 6,
+      timezone: "Asia/Seoul",
+      immediateNotifications: false,
+      backgroundEnabled: false,
+      collectionIntervalSecs: 300,
+      theme: "system",
+    },
+    projects: [],
+    notes: [],
+    sources: [],
+    tasks: [],
+    chats: [],
+    notices: [],
+  },
+  inventories: [],
+  collections: [],
+  records: [],
+  analysis: {
+    userRequests: 0,
+    recordCount: 0,
+    projectCount: 0,
+    missingTimestamps: 0,
+    providers: {},
+    repeatedRequests: [],
+    ambiguousExpressions: [],
+    method: "exact-text-and-expression-candidates",
+  },
+  loadedAt: "2026-11-02T00:00:00Z",
+};

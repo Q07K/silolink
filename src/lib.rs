@@ -1,5 +1,6 @@
 pub mod changes;
 pub mod cli;
+pub mod desktop;
 pub mod documents;
 pub mod error;
 pub mod history;
@@ -7,5 +8,6 @@ pub mod install;
 pub mod project;
 pub mod providers;
 pub mod records;
+pub mod registry;
 pub mod store;
 pub mod sync;

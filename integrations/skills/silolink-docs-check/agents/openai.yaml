@@ -1,0 +1,4 @@
+interface:
+  display_name: "silolink-docs-check · 변경안 미리보기"
+  short_description: "작성한 문서 변경안의 전후 내용과 충돌·참조 영향을 확인합니다."
+  default_prompt: "$silolink-docs-check 문서 변경안의 전후 내용과 영향을 미리 확인해줘."

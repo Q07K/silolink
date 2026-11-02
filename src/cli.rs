@@ -205,7 +205,9 @@ pub fn parse(args: &[String]) -> Result<Options> {
 }
 pub fn init(options: &Options) -> Result<serde_json::Value> {
     let (project, created) = project::init(&options.directory)?;
+    let registry = crate::registry::directory()?;
+    crate::registry::register(&registry, &project)?;
     Ok(
-        serde_json::json!({"schemaVersion":1,"command":"init","status":"success","created":created,"project":project.json()}),
+        serde_json::json!({"schemaVersion":1,"command":"init","status":"success","created":created,"project":project.json(),"desktopRegistration":{"status":"registered","directory":registry}}),
     )
 }

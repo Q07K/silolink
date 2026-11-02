@@ -1,0 +1,4 @@
+interface:
+  display_name: "silolink-docs-apply · 문서 변경 적용"
+  short_description: "검토한 문서 변경안을 백업과 함께 적용하고 실제 결과를 확인합니다."
+  default_prompt: "$silolink-docs-apply 검토한 문서 변경안을 적용해줘."

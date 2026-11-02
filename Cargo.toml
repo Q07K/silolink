@@ -1,11 +1,16 @@
 [package]
 name = "silolink"
-version = "0.1.0-dev.0"
+version = "0.1.0"
 edition = "2024"
 rust-version = "1.90"
 description = "Connect project knowledge and AI work across coding tools"
 publish = false
 default-run = "silolink"
+
+[workspace]
+members = ["desktop/src-tauri"]
+default-members = ["."]
+resolver = "3"
 
 [[bin]]
 name = "silolink-provider-fixture"
@@ -28,6 +33,9 @@ uuid = { version = "1", features = ["v4"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Threading"] }
+
+[target.'cfg(windows)'.build-dependencies]
+tauri-winres = "0.3.7"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

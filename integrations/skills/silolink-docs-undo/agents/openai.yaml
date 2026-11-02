@@ -1,0 +1,4 @@
+interface:
+  display_name: "silolink-docs-undo · 문서 변경 복구"
+  short_description: "선택한 문서 변경을 되돌리고 이후에 수정한 내용은 보존합니다."
+  default_prompt: "$silolink-docs-undo 되돌릴 문서 변경을 확인하고 복구해줘."

@@ -6,6 +6,10 @@
 
 ## 설치와 실행
 
+`init`은 폴더의 `.silolink/project.json`을 만든 뒤 공통 사용자 등록부(`~/.silolink/projects/<project-id>.json`)에 절대 경로를 기록한다. CLI는 데스크톱의 `workspace.json`을 직접 수정하지 않는다. 앱은 시작·새로고침 및 실행 중 2초 간격으로 등록부를 읽어 실제 프로젝트 식별자를 확인하고 기존 작업 공간에 병합한다. AI 기록 백그라운드 수집 설정과는 독립적이다. 기존 앱에는 이 경로가 없으므로 업데이트 후 `init`을 다시 실행해야 한다. 등록 실패는 명령 실패로 보고하며, 이미 만든 프로젝트 정보는 재시도에 사용한다. 동일 식별자의 다른 경로는 자동으로 덮어쓰지 않는다.
+
+격리 테스트는 `SILOLINK_PROJECT_REGISTRY_DIR`로 등록부를 지정한다. 미지정 시 `SILOLINK_USER_HOME` 또는 OS 사용자 홈을 사용한다. 등록부에 없는 폴더를 전체 디스크에서 탐색하지 않으며 잘못된 등록 항목은 다른 프로젝트를 막지 않고 앱에 오류로 표시한다.
+
 Windows x64 릴리스 실행 파일은 `silolink.exe` 하나다. 실행에 Node·npm·Rust 설치를 요구하지 않는다. Codex 이력 조회에는 사용자의 공식 Codex 실행 파일이 필요하며 Claude 조회는 기존 로컬 기록을 읽는다. 인증정보를 추출하거나 새 인증을 중계하지 않는다.
 
 저장소에서 빌드할 때는 Rust 1.90 이상, Windows MSVC 도구체인과 C++ Build Tools가 필요하다. SQLite는 정적으로 포함한다. x64 MSVC 빌드의 CRT도 정적으로 연결하며 현재 확인한 의존 DLL은 Windows 시스템 DLL이다. macOS·ARM64 실행은 아직 검증하지 않았다.
@@ -20,7 +24,7 @@ Windows x64 릴리스 실행 파일은 `silolink.exe` 하나다. 실행에 Node�
 
 설치 기본 위치는 `%LOCALAPPDATA%\SiloLink\bin`이다. `-InstallDirectory`로 변경하고 `-HostName codex|claude|antigravity|all`로 설치할 스킬을 선택한다. `-NoPath`는 사용자 PATH 변경을 생략하고 `-SkipSkills`는 스킬 설치를 생략한다. 기존 터미널에서 명령을 못 찾으면 다시 열거나 설치된 실행 파일의 전체 경로를 사용한다. 실행 중인 파일 교체가 거부되면 해당 SiloLink 실행을 종료한 뒤 다시 설치한다.
 
-공개 릴리스 다운로드·자동 업데이트·마켓플레이스 등록은 아직 제공하지 않는다. 임의 npm 동명 패키지 설치가 이 저장소의 설치를 대신하지 않는다.
+Windows 태그 자동 배포 워크플로가 추가됐다. 저장소 반영과 첫 원격 실행·공개 릴리스 게시는 별도 단계다. [배포 안내](releasing.md)를 참고한다. 자동 업데이트·공개 마켓플레이스 등록은 아직 제공하지 않는다. Codex용 플러그인 패키지는 아래의 별도 배포 단위다. 임의 npm 동명 패키지 설치가 이 저장소의 설치를 대신하지 않는다.
 
 직접 빌드·검증하려면 다음 명령을 사용한다. 이 작업 환경의 `scripts/cargo.ps1`은 저장소 안에 격리한 MSVC 도구체인이 있으면 사용하고, 없으면 설치된 Cargo를 사용한다. 도구체인 파일과 캐시는 배포 원본에 포함하지 않는다.
 
@@ -48,15 +52,31 @@ silolink setup --host all --scope project --project "C:\path\to\project"
 | Claude Code | `~/.claude/skills/silolink` | `.claude/skills/silolink` | `/silolink init` |
 | Antigravity | `~/.gemini/config/skills/silolink` | `.agents/skills/silolink` | 지원 화면의 `/silolink init` |
 
-도구를 다시 열거나 스킬 새로고침 기능으로 확인한다. Codex와 Antigravity의 프로젝트 경로가 같으면 한 번만 설치한다. `SILOLINK_USER_HOME`은 사용자 범위 설치 기준을 명시적으로 바꿀 때 사용할 수 있다. 현재 배포 단위는 독립 스킬이며 마켓플레이스 플러그인은 아니다.
+도구를 다시 열거나 스킬 새로고침 기능으로 확인한다. Codex와 Antigravity의 프로젝트 경로가 같으면 한 번만 설치한다. `SILOLINK_USER_HOME`은 사용자 범위 설치 기준을 명시적으로 바꿀 때 사용할 수 있다. 이 setup 경로는 독립 스킬 설치다. Codex에는 같은 스킬과 실행 파일을 묶은 로컬 플러그인 체험 배포도 제공한다. 두 방식을 동시에 설치하면 같은 스킬이 두 번 보일 수 있으므로 하나를 선택한다.
 
-스킬 원본은 `integrations/skills/silolink/SKILL.md`이고 실행 파일에 포함된다. 설치 결과는 `SKILL.md`와 `installation.json` 두 파일이다. 설치 메타데이터 v2의 `cliPath`는 네이티브 실행 파일의 절대 경로다. 스킬은 구형 PATH 명령과 혼동하지 않도록 그 경로를 우선 실행하고, 설치 메타데이터 없이 수동 복사한 스킬은 PATH의 `silolink`를 사용한다. `.js` 런처나 별도 인터프리터는 사용하지 않는다. PowerShell 전체 경로 호출은 `& "C:\path\to\silolink.exe" init`이다.
+스킬 원본은 `integrations/skills/`에 있으며 실행 파일에 포함된다. 기존 `silolink`와 `silolink-init`, `silolink-docs`, `silolink-docs-check`, `silolink-docs-apply`, `silolink-docs-changes`, `silolink-docs-undo`, `silolink-history`, `silolink-sync`, `silolink-records`, `silolink-watch`를 함께 설치한다. 각 스킬에 `SKILL.md`와 `installation.json`이 있고, 기능별 항목에는 한국어 UI 이름·설명·기본 요청을 담은 `agents/openai.yaml`도 설치한다. 기능별 진입점은 함께 설치하는 통합 스킬의 공통 실행·변경 계약을 읽는다.
 
-동일한 설치는 유지한다. 기존 타사·사용자 수정·구형 JavaScript 스킬·링크 경로·다른 실행 파일 경로는 덮어쓰지 않고 충돌로 표시한다. 설치·실패 대상을 각각 보고하며 일부 성공은 종료 코드 2다. 구형 설치를 교체하려면 스킬 폴더의 내용을 확인·백업하고 제거한 뒤 네이티브 `setup`을 실행한다. 프로젝트 메타데이터나 기록 DB를 지우는 절차가 아니다. 스킬 자동 업그레이드·제거는 후속 범위다.
+설치 메타데이터 v2의 `cliPath`는 네이티브 실행 파일의 절대 경로다. 스킬은 구형 PATH 명령과 혼동하지 않도록 그 경로를 우선 실행하고, 설치 메타데이터 없이 수동 복사한 스킬은 PATH의 `silolink`를 사용한다. `.js` 런처나 별도 인터프리터는 사용하지 않는다. PowerShell 전체 경로 호출은 `& "C:\path\to\silolink.exe" init`이다.
+
+동일한 설치는 유지한다. 현재 통합 스킬만 있고 원문·메타데이터가 일치하면 `update_available`로 표시하고 기존 파일을 다시 쓰지 않은 채 빠진 기능별 스킬을 추가한다. 기존 타사·사용자 수정·구형 JavaScript 스킬·링크 경로·다른 실행 파일 경로는 덮어쓰지 않고 충돌로 표시한다. 호스트별로 모든 스킬 이름을 사전 검사하며 충돌 시 새 항목도 만들지 않는다. 실제 쓰기 실패 시 이미 완료된 항목은 개별 결과에 남기고 부분 반영을 보고한다. 일부 성공은 종료 코드 2다. 충돌하는 설치를 교체하려면 내용을 확인·백업하고 해당 스킬을 제거한 뒤 `setup`을 실행한다. 프로젝트 메타데이터나 기록 DB를 지우는 절차가 아니다. 수정된 스킬의 강제 업데이트·제거는 후속 범위다.
 
 호출·설치 위치 근거: [OpenAI Skills](https://learn.chatgpt.com/docs/build-skills), [Claude Code Skills](https://code.claude.com/docs/en/skills), [Antigravity Skills](https://antigravity.google/docs/skills). 실제 Codex 스킬 발견과 Claude의 `/silolink init` 실행을 확인했다. Antigravity 앱 내 사용·Codex 모델 실행·각 도구의 UI 메뉴 조작은 미검증이다.
 
 ## 프로젝트 초기화
+
+### Codex 로컬 플러그인 체험 패키지
+
+개발자는 CLI를 빌드한 뒤 새 출력 경로로 패키지를 만든다. 기존 출력이나 ZIP은 덮어쓰지 않는다.
+
+```powershell
+.\scripts\package-plugin.ps1 -OutputDirectory .tools\releases\silolink-preview
+```
+
+ZIP에는 허용 목록의 플러그인 매니페스트·브랜드 아이콘·공통 스킬·`bin/silolink.exe`, 로컬 마켓플레이스, 한국어 HTML 안내와 `Codex에 등록.cmd`를 포함한다. 사용자 대화·프로젝트 문서·설정·개발 도구체인은 복사하지 않는다. 루트 `plugin.json`과 `.codex-plugin/plugin.json` 호환 매니페스트를 제공한다. 설치 캐시로 복사된 스킬은 실제 스킬 경로에서 `../../bin/silolink.exe`를 찾아 사용하므로 PATH·원본 checkout·빌드 도구에 의존하지 않는다.
+
+등록 파일은 설치된 Codex의 `plugin marketplace add`를 호출해 이 패키지를 로컬 설치 목록에 등록한다. 플러그인 설치·활성화는 앱의 플러그인 화면에서 이어간다. PATH의 `codex.exe`와 기본 Windows Codex 설치 위치를 확인하며, 그 외 위치는 아직 자동 탐지하지 않는다. [사용자 안내](../user/getting-started.md)와 [공식 로컬 플러그인 안내](https://developers.openai.com/plugins/build/plugins)를 참고한다. 기존 사용자 설정을 직접 덮어쓰거나 사용자 프로젝트를 초기화하는 등록기가 아니다.
+
+### CLI 직접 실행
 
 ```powershell
 silolink init --project "C:\path\to\project"

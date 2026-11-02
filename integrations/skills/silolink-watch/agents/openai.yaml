@@ -1,0 +1,4 @@
+interface:
+  display_name: "silolink-watch · AI 기록 주기 수집"
+  short_description: "프로젝트 AI 기록을 일정 간격으로 가져오고 중지 방법을 안내합니다."
+  default_prompt: "$silolink-watch 이 프로젝트의 AI 기록을 주기적으로 가져오게 해줘."

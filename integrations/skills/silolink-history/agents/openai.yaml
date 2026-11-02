@@ -1,0 +1,4 @@
+interface:
+  display_name: "silolink-history · AI 대화 기록 조회"
+  short_description: "지원되는 AI 도구의 프로젝트 대화 기록을 저장 없이 조회합니다."
+  default_prompt: "$silolink-history 이 프로젝트의 AI 대화 기록을 조회해줘."

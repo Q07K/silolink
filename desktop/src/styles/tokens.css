@@ -1,0 +1,33 @@
+:root {
+  color-scheme: light dark;
+  --brand-700: #0349c7;
+  --brand-600: #0058ed;
+  --brand-400: #218bf5;
+  --brand-200: #9dccff;
+  --brand-50: #eaf2ff;
+  --background: light-dark(#f6f7fa, #14171d);
+  --surface: light-dark(#ffffff, #1d2129);
+  --text: light-dark(#202530, #edf2fa);
+  --muted: light-dark(#626c7e, #a6b1c4);
+  --border: light-dark(#e2e7f0, #343e4d);
+  --soft: light-dark(#eff2f7, #28313e);
+  --accent: light-dark(var(--brand-600), var(--brand-200));
+  --accent-soft: light-dark(var(--brand-50), #233a5a);
+  --on-accent: light-dark(#ffffff, #122641);
+  --danger: light-dark(#b22e3e, #ffa5ad);
+  --success: light-dark(#21684d, #92d2b3);
+  --sidebar: light-dark(#1d2431, #151c28);
+  --sidebar-text: #f0f4ff;
+  --sidebar-muted: #b3bfd3;
+  --sidebar-selected: #303c51;
+  font-family:
+    "Pretendard Variable", Pretendard, "Segoe UI", "Malgun Gothic", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}

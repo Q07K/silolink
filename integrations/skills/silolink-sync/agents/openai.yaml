@@ -1,0 +1,4 @@
+interface:
+  display_name: "silolink-sync · AI 기록 가져오기"
+  short_description: "선택한 보관 폴더에 프로젝트 AI 대화 기록을 가져와 저장합니다."
+  default_prompt: "$silolink-sync 이 프로젝트의 AI 대화 기록을 가져와 저장해줘."

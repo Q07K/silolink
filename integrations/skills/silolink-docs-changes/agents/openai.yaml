@@ -1,0 +1,4 @@
+interface:
+  display_name: "silolink-docs-changes · 문서 변경 이력"
+  short_description: "저장된 문서 변경 이력과 적용·복구 상태를 프로젝트별로 확인합니다."
+  default_prompt: "$silolink-docs-changes 이 프로젝트의 문서 변경 이력을 보여줘."
