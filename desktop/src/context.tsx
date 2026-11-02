@@ -14,7 +14,7 @@ export interface WorkspaceContext {
   ask: (question: string, mode?: string, evidenceIds?: string[]) => void;
   refresh: () => Promise<void>;
   perform: (work: () => Promise<unknown>, success?: string) => Promise<boolean>;
-  openDocument: (projectId: string, path: string, revision: string) => void;
+  openDocument: (projectId: string, path: string, revision: string, fragment?: string) => void;
 }
 export const Workspace = createContext<WorkspaceContext | null>(null);
 export function useWorkspace(): WorkspaceContext {

@@ -366,7 +366,7 @@ export function ProjectsPage() {
 export function DocumentsPage({
   selected,
 }: {
-  selected: { projectId: string; path: string; revision: string } | null;
+  selected: { projectId: string; path: string; revision: string; fragment?: string } | null;
 }) {
   const {
     snapshot: s,
@@ -386,7 +386,7 @@ export function DocumentsPage({
     setDocument(null);
     setReadError("");
     if (selected && selected.projectId === projectId && view === "reader") {
-      void native<DocumentItem>("read_document", selected)
+      void native<DocumentItem>("read_document", { projectId: selected.projectId, path: selected.path, revision: selected.revision })
         .then((value) => {
           if (active) setDocument(value);
         })
@@ -434,6 +434,7 @@ export function DocumentsPage({
             <MarkdownContent
               text={document.text || ""}
               documentPath={document.path}
+              fragment={selected?.fragment}
             />
             <div className="inline">
               <PromptButton

@@ -63,6 +63,7 @@ export default function App() {
     projectId: string;
     path: string;
     revision: string;
+    fragment?: string;
   } | null>(null);
   const [question, setQuestion] = useState("");
   const [mode, setMode] = useState("chat");
@@ -166,8 +167,8 @@ export default function App() {
         ask,
         refresh,
         perform,
-        openDocument: (id: string, path: string, revision: string) => {
-          setDocument({ projectId: id, path, revision });
+        openDocument: (id: string, path: string, revision: string, fragment?: string) => {
+          setDocument({ projectId: id, path, revision, fragment });
           navigate("docs", "reader");
         },
       }

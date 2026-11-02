@@ -113,6 +113,21 @@ NSIS 설치 프로그램과 프로덕션 실행 파일도 생성했다. `--execu
 
 2026-11-03 프로세스 표시 보완에서는 CLI의 빈 `FileDescription`으로 먼저 실패를 확인한 뒤 `SiloLink CLI` 이름·검정 로고를 공개 CLI EXE에 포함하고 앱 컨텍스트에도 창·트레이 아이콘을 명시했다. 최종 `process_branding.ps1`의 EXE 3개 및 실제 실행 창 검증 4개가 통과했으며 모든 아이콘 비교 차이는 0이다. 결과는 `.tools/process-branding/34e60ce7-3135-447b-8da6-1baf0bd58a8e/`다. 최초 런타임 검사는 큰 아이콘만 조회하고 ICO의 32px 항목과 128px 창 아이콘을 비교하는 시험 결함이 있어, 작은 아이콘 조회와 같은 해상도의 PNG 기준 비교로 수정했다. CLI·릴리스 테스트 6건, 최종 설치 스크립트 14개 흐름(`.tools/installer-smoke/bef542d9-ef30-443b-a4f8-b0a0983d0544/`), 포맷·CLI/데스크톱 Clippy·actionlint·릴리스 빌드·배포 체크섬 검증을 통과했다. 설치 EXE·플러그인 ZIP·체크섬은 `.tools/releases/SiloLink-0.1.0-process-branding/`에 있다. Windows 작업 관리자 자체의 UI나 세부 정보 탭의 파일명 변경을 검증했다고 주장하지 않는다.
 
+## Markdown 문서·노트·대화 표시 — 2026-11-03
+
+| 요구·상태 경계 | 사례·검증 위치 | 기대 |
+| --- | --- | --- |
+| 표·정렬·셀 내부 구문 | [markdown.test.tsx](../desktop/src/markdown.test.tsx), [markdown.md](../desktop/tests/fixtures/markdown.md) | 시작 조건 표를 실제 table로 표시. 좌/중앙/우 정렬과 강조·인라인 코드·이스케이프 파이프 보존 |
+| 체크 목록·취소선·URL | 같은 컴포넌트 시험 | 완료/미완료 상태와 중첩 목록. 읽기 전용이며 원문 변경 호출 없음. 일반 URL은 사용자가 누를 때만 기존 외부 참조 명령 호출 |
+| 같은 문서 제목·각주 | 같은 시험, [native_smoke.py](../desktop/tests/native_smoke.py) | 한글·중복 제목, 각주·돌아가기의 실제 스크롤/포커스. 같은 본문을 다시 읽지 않고 여러 본문 ID도 충돌하지 않음 |
+| 다른 문서의 제목 | 같은 시험 및 실제 App→DocumentsPage→Rust 읽기 | 한글·공백 상대 경로와 리비전을 유지하고 `#제목`을 전달해 읽기 완료 후 위치 이동 |
+| 코드·활성 콘텐츠 경계 | 같은 시험과 네이티브 픽스처 | 코드 안의 표/HTML/체크 문법은 원문 보존. HTML·script URL·이미지는 실행하거나 자동 요청하지 않음. 프로젝트 밖 읽기 거절 유지 |
+| 넓은 표·긴 코드·테마 | 실제 앱 1320px 밝음/1040px 어두움 | 문서 내부 스크롤 영역으로 제한하고 전체 화면의 가로 오버플로 없음. 기존 앱 데이터 표는 별도 스타일 유지 |
+
+기본 GFM 사례 5건(표·체크/취소선·자동 URL·제목·각주)의 실패를 먼저 확인한 뒤 구현했다. 문서 간 앵커 누락도 별도 실패를 확인하고 수정했다. 기존 14건에 Markdown 10건을 더한 `npm test` 24건, 타입 검사/Vite 빌드와 정식 Windows 릴리스 빌드를 통과했다. 실제 배포용 EXE의 `native_smoke.py` 10개 연결 흐름이 오류 없이 통과했으며 `.tools/desktop-smoke/2b6b90e0-cfd4-491a-850a-f605dcf2eeb3/`에 밝음/어두움 Markdown 화면과 결과가 있다. 이 실행에는 기존 도구 연결·초기화·수집·문서 읽기·학습·작업·변경 충돌/복구·대화 실패/취소·재시작 보존 흐름을 포함한다. 최종 빌드의 프로세스 표시 4항목도 통과했다(`.tools/process-branding/0d8eea6d-3b55-406f-a6dd-285ffc900f7a/`). 설치 EXE·플러그인 ZIP·검증한 체크섬은 `.tools/releases/SiloLink-0.1.0-markdown-rendering/`에 있다.
+
+전용 Mermaid/수식 엔진, HTML 실행, 이미지 자동 로드는 이 변경의 지원 주장에 포함하지 않는다. 각 미지원 구문의 현재 표시 방식은 [Markdown 표시 계약](../docs/development/desktop.md#markdown-표시-계약)에 구분했다.
+
 ## 한계와 후속 검증
 
 ### 기능별 스킬 선택과 기존 설치 확장 — 2026-11-02

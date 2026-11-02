@@ -74,6 +74,22 @@ Windows x64·MSVC·WebView2를 기준으로 확인한다. 소스 개발에는 No
 
 ## 검증
 
+### Markdown 표시 계약
+
+문서·노트·대화는 같은 `MarkdownContent`를 사용한다. 기본 CommonMark 렌더러에 [remark-gfm](https://github.com/remarkjs/remark-gfm)을 연결하고, 제목은 [rehype-slug](https://github.com/rehypejs/rehype-slug)로 GitHub 방식의 한글·중복 제목 ID를 생성한다.
+
+| 분석한 사례 | 원인 | 현재 처리 |
+| --- | --- | --- |
+| 파이프 표가 한 문단으로 표시됨 | 기본 CommonMark에 GFM 표 확장이 없음 | 표·정렬·강조·이스케이프 파이프를 해석. 넓은 표는 키보드로 접근 가능한 영역 안에서 가로 스크롤 |
+| `[x]`, `~~취소선~~`, 일반 URL, 각주가 원문으로 남음 | 같은 GFM 확장 누락 | 읽기 전용 체크 상태·취소선·자동 링크·각주 렌더링. 외부 URL은 사용자가 눌렀을 때 기존 네이티브 열기 기능 사용 |
+| 목차·각주가 문서를 다시 읽거나 이동하지 않음 | 모든 상대 링크를 파일 링크로만 취급 | 같은 본문에서 제목·각주·돌아가기 이동. 다른 문서의 `#제목`도 읽기 완료 후 이동. 각 본문의 ID를 분리해 대화 여러 개가 있어도 충돌 방지 |
+| 긴 코드·열이 많은 표가 레이아웃을 밀어냄 | 가로 오버플로 처리와 본문/앱 표 스타일의 구분 부족 | 본문 표를 앱 데이터 표와 분리. 표/코드 내부에서 가로 스크롤하고 인라인 코드·인용문을 구분 |
+| HTML·이미지·알 수 없는 코드 언어 | 실행·원격 로드 기능과 Markdown 표시 기능은 별개 | HTML은 활성 DOM으로 해석하지 않고 이미지는 기존 설명 표시 유지. Mermaid·수식 전용 엔진은 추가하지 않아 코드/원문으로 읽을 수 있음 |
+
+문서 원문을 다시 쓰거나 체크 목록 클릭으로 파일을 수정하지 않는다. 실패 재현과 코드·HTML 격리, 상대 문서 링크 회귀는 `desktop/src/markdown.test.tsx`에서 검사한다. 실제 창에서 표 정렬·가로 스크롤·제목/각주 이동·문서 간 앵커·테마를 확인하는 픽스처는 `desktop/tests/fixtures/markdown.md`이며 `native_smoke.py`에 포함한다.
+
+### 실행 명령
+
 ```powershell
 .\scripts\cargo.ps1 -CargoArguments @('test', '--all-targets', '--locked')
 .\scripts\cargo.ps1 -CargoArguments @('test', '-p', 'silolink-desktop', '--lib', '--locked')

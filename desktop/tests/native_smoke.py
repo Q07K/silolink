@@ -28,7 +28,7 @@ PROJECT = OUT / '검증 프로젝트'
 PROJECT.mkdir()
 ORIGINAL = '# Native desktop verification\r\n\r\n[Related document](guide.md)\r\n\r\nOriginal content.\r\n'
 (PROJECT / 'README.md').write_bytes(ORIGINAL.encode('utf-8'))
-(PROJECT / 'guide.md').write_text('# Related guide\n\n<script>window.untrustedExecuted=true</script>\n', encoding='utf-8')
+(PROJECT / 'guide.md').write_bytes((ROOT / 'desktop/tests/fixtures/markdown.md').read_bytes())
 STATE = OUT / 'record-store'
 PROFILE = OUT / 'desktop-profile'
 TOOL_HOME = OUT / 'tool-user'
@@ -221,6 +221,39 @@ with sync_playwright() as playwright:
         page.locator('.markdown').get_by_role('button',name='Related document',exact=True).click()
         page.locator('.markdown').get_by_role('heading',name='Related guide',exact=True).wait_for()
         assert not page.evaluate('Boolean(window.untrustedExecuted)')
+        markdown = page.locator('.markdown')
+        assert markdown.get_by_role('table').count() == 2
+        expect(markdown.get_by_role('cell', name='각본 승인 | 시트 그리기', exact=True)).to_be_visible()
+        assert markdown.get_by_role('columnheader', name='비용', exact=True).evaluate('(cell)=>getComputedStyle(cell).textAlign') == 'right'
+        checks_list = markdown.get_by_role('checkbox')
+        assert checks_list.count() == 2
+        assert checks_list.nth(0).is_checked() and not checks_list.nth(1).is_checked()
+        assert checks_list.nth(0).is_disabled() and checks_list.nth(1).is_disabled()
+        expect(markdown.locator('del')).to_have_text('이전 방향')
+        expect(markdown.get_by_role('button', name='https://example.org/guide', exact=True)).to_be_visible()
+        assert markdown.locator('script, iframe, img').count() == 0
+        original_url = page.url
+        markdown.get_by_role('link', name='중복 제목으로 이동', exact=True).click()
+        assert page.evaluate('document.activeElement.id.endsWith("시작-조건-1")')
+        assert page.url == original_url
+        markdown.get_by_role('link', name='1', exact=True).click()
+        assert page.evaluate('document.activeElement.tagName') == 'LI'
+        markdown.get_by_role('link', name='본문으로 돌아가기', exact=True).click()
+        assert page.evaluate('document.activeElement.tagName') == 'A'
+        for width, theme in [(1320, 'light'), (1040, 'dark')]:
+            page.set_viewport_size({'width':width, 'height':900})
+            page.evaluate('(theme)=>document.documentElement.dataset.theme=theme', theme)
+            assert markdown.locator('.markdown-table-scroll').nth(1).evaluate('(el)=>el.scrollWidth>el.clientWidth')
+            assert markdown.locator('pre').evaluate('(el)=>el.scrollWidth>el.clientWidth')
+            assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+            markdown.get_by_role('heading', name='시작 조건', exact=True).first.scroll_into_view_if_needed()
+            page.screenshot(path=str(OUT / f'markdown-{width}-{theme}.png'))
+        page.set_viewport_size(original_size)
+        page.evaluate('document.documentElement.dataset.theme="system"')
+        markdown.get_by_role('button', name='원문 제목으로 이동', exact=True).click()
+        page.locator('.markdown').get_by_role('heading', name='Native desktop verification', exact=True).wait_for()
+        assert page.evaluate('document.activeElement.textContent') == 'Native desktop verification'
+        checks.append('GFM tables/alignment, readonly tasks, strikethrough, autolinks, scoped footnotes/headings, cross-document anchor, wide tables/code at 1320-light/1040-dark, no global overflow or active HTML/images')
         denied = page.evaluate('async v=>{try{await window.__TAURI_INTERNALS__.invoke("read_document",v);return null;}catch(e){return e;}}',{'projectId':project_id,'path':'../outside.md','revision':None})
         assert denied['code']=='DOCUMENT_OUT_OF_SCOPE'
         checks.append('real document read, internal Markdown navigation, HTML isolation, path traversal denied')
