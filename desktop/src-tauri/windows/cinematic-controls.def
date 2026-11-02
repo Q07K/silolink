@@ -1,0 +1,5 @@
+LIBRARY cinematic-controls
+EXPORTS
+    StyleControl=_StyleControl@8
+    StyleWindow=_StyleWindow@8
+    ReleaseStyles=_ReleaseStyles@4

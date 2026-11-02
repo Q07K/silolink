@@ -1,0 +1,4 @@
+interface:
+  display_name: "silolink-docs · 문서 확인"
+  short_description: "프로젝트 문서 현황과 정리 후보·링크 문제를 원문 근거로 확인합니다."
+  default_prompt: "$silolink-docs 이 프로젝트의 문서 현황과 정리 후보를 확인해줘."

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-window",
+  "description": "Local SiloLink window; project access goes through validated Rust commands.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

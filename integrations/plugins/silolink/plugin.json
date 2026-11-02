@@ -1,0 +1,22 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "silolink",
+  "version": "0.1.0",
+  "description": "프로젝트 문서와 AI 대화 기록을 연결하고, 정리할 부분과 다음 작업을 함께 살펴봅니다. Windows 체험판.",
+  "author": { "name": "SiloLink" },
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "SiloLink",
+        "shortDescription": "흩어진 문서와 AI 작업 맥락을 한곳에서",
+        "longDescription": "작업하던 폴더를 연결해 문서 현황과 정리 후보를 확인하세요. AI 대화 기록 가져오기는 선택 사항입니다. Windows x64용 실행 파일을 포함합니다.",
+        "developerName": "SiloLink",
+        "category": "Productivity",
+        "brandColor": "#0058ED",
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/icon.png",
+        "defaultPrompt": ["SiloLink로 이 프로젝트를 연결하고 문서 현황을 알려줘."]
+      }
+    }
+  }
+}

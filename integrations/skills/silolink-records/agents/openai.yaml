@@ -1,0 +1,4 @@
+interface:
+  display_name: "silolink-records · 저장한 AI 기록 보기"
+  short_description: "이미 가져와 저장한 프로젝트 대화 기록을 새 수집 없이 확인합니다."
+  default_prompt: "$silolink-records 이미 저장한 이 프로젝트의 AI 기록을 보여줘."

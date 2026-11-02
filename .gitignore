@@ -1,2 +1,9 @@
 target/
 .tools/
+node_modules/
+desktop/dist/
+desktop/test-results/
+desktop/playwright-report/
+desktop/src-tauri/gen/
+desktop/src-tauri/resources/*.exe
+desktop/src-tauri/windows/generated/

@@ -1,0 +1,166 @@
+use crate::runtime::{Runtime, lock};
+use serde_json::json;
+use std::sync::Arc;
+use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_notification::NotificationExt;
+
+// Project discovery is independent of optional AI history collection.
+pub async fn project_connections(app: AppHandle, runtime: Arc<Runtime>) {
+    loop {
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        let rt = runtime.clone();
+        if matches!(
+            tauri::async_runtime::spawn_blocking(move || rt.sync_projects()).await,
+            Ok(Ok(true))
+        ) {
+            let _ = app.emit("workspace-changed", json!({"projects":true}));
+        }
+    }
+}
+
+pub async fn background(app: AppHandle, runtime: Arc<Runtime>) {
+    use chrono::{Datelike, Timelike};
+    let mut last_collection = std::time::Instant::now()
+        .checked_sub(std::time::Duration::from_secs(86400))
+        .unwrap_or_else(std::time::Instant::now);
+    loop {
+        tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+        let data = match lock(&runtime.repository) {
+            Ok(repo) => repo.data.clone(),
+            Err(_) => continue,
+        };
+        if !data.settings.background_enabled {
+            continue;
+        }
+        if data.settings.state_directory.is_some()
+            && last_collection.elapsed().as_secs() >= data.settings.collection_interval_secs
+        {
+            for project in &data.projects {
+                let result = super::runtime::collect(runtime.clone(), project.id.clone()).await;
+                let _ = app.emit(
+                    "collection-finished",
+                    json!({"projectId":project.id,"success":result.is_ok()}),
+                );
+            }
+            last_collection = std::time::Instant::now();
+        }
+        let offset = chrono::FixedOffset::east_opt(if data.settings.timezone == "Asia/Seoul" {
+            9 * 3600
+        } else {
+            0
+        })
+        .expect("supported offset");
+        let now = chrono::Utc::now().with_timezone(&offset);
+        let parts: Vec<_> = data
+            .settings
+            .review_time
+            .split(':')
+            .filter_map(|s| s.parse::<u32>().ok())
+            .collect();
+        if parts.len() == 2 && (now.hour(), now.minute()) >= (parts[0], parts[1]) {
+            notify_once(
+                &app,
+                &runtime,
+                &format!("daily:{}", now.date_naive()),
+                "daily",
+                "하루를 돌아볼 시간입니다.",
+                data.settings.immediate_notifications,
+            );
+            if now.weekday().num_days_from_monday() == data.settings.review_weekday {
+                notify_once(
+                    &app,
+                    &runtime,
+                    &format!("weekly:{}", now.date_naive()),
+                    "weekly",
+                    "이번 주의 요청과 프로젝트를 함께 돌아보세요.",
+                    data.settings.immediate_notifications,
+                );
+            }
+        }
+        if data.settings.immediate_notifications {
+            let rt = runtime.clone();
+            if let Ok(Ok(snapshot)) =
+                tauri::async_runtime::spawn_blocking(move || rt.snapshot()).await
+                && let Some(groups) = snapshot["analysis"]["repeatedRequests"].as_array()
+            {
+                for group in groups.iter().take(3) {
+                    let fingerprint =
+                        format!("repeat:{}:{}", group["recordIds"][0], group["count"]);
+                    notify_once(
+                        &app,
+                        &runtime,
+                        &fingerprint,
+                        "pattern",
+                        "반복된 요청을 발견했습니다. 원문과 맥락을 확인해 보세요.",
+                        true,
+                    );
+                }
+            }
+        }
+    }
+}
+fn notify_once(
+    app: &AppHandle,
+    runtime: &Runtime,
+    id: &str,
+    kind: &str,
+    title: &str,
+    system: bool,
+) {
+    let added = lock(&runtime.repository).and_then(|mut repo| repo.record_notice(id, kind, title));
+    if matches!(added, Ok(true)) {
+        if system {
+            let _ = app
+                .notification()
+                .builder()
+                .title("SiloLink")
+                .body(title)
+                .show();
+        }
+        let _ = app.emit("workspace-changed", json!({"notice":id}));
+    }
+}
+pub fn shutdown(app: AppHandle) {
+    let runtime = app.state::<Arc<Runtime>>().inner().clone();
+    tauri::async_runtime::spawn(async move {
+        if let Ok(jobs) = runtime.jobs.lock() {
+            for sender in jobs.values() {
+                let _ = sender.send(true);
+            }
+        }
+        for _ in 0..40 {
+            if runtime.jobs.lock().is_ok_and(|jobs| jobs.is_empty()) {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        app.exit(0);
+    });
+}
+pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
+    use tauri::{
+        menu::{Menu, MenuItem},
+        tray::TrayIconBuilder,
+    };
+    let show = MenuItem::with_id(app, "show", "SiloLink 열기", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "종료", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show, &quit])?;
+    let mut tray = TrayIconBuilder::new()
+        .menu(&menu)
+        .tooltip("SiloLink")
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "show" => {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+            "quit" => shutdown(app.clone()),
+            _ => (),
+        });
+    if let Some(icon) = app.default_window_icon() {
+        tray = tray.icon(icon.clone());
+    }
+    tray.build(app)?;
+    Ok(())
+}
