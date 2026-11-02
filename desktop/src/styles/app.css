@@ -632,7 +632,10 @@ blockquote {
   line-height: 1.95;
   font-size: 14px;
   margin: 18px 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
+.markdown [id] { scroll-margin-top: 24px; }
 .markdown h1 {
   font-size: 25px;
   margin: 24px 0 15px;
@@ -656,16 +659,51 @@ blockquote {
   padding: 16px;
   border-radius: 7px;
   background: var(--soft);
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre;
+  overflow-wrap: normal;
 }
-.markdown table,
+.markdown code { font-size: 0.9em; }
+.markdown :not(pre) > code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--soft);
+}
+.markdown blockquote {
+  margin: 16px 0;
+  padding: 1px 18px;
+  border-left: 3px solid var(--border);
+  color: var(--muted);
+}
+.markdown .contains-task-list { list-style: none; padding-left: 0; }
+.markdown .task-list-item input { margin-right: 7px; vertical-align: middle; }
+.markdown .task-list-item input:disabled { opacity: 1; }
+.markdown .footnotes { margin-top: 28px; border-top: 1px solid var(--border); font-size: 0.9em; }
+.markdown-table-scroll { max-width: 100%; overflow-x: auto; margin: 18px 0; }
+.markdown-table-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.markdown table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+.markdown th { background: var(--soft); font-weight: 600; }
+.markdown tr:nth-child(even) { background: color-mix(in srgb, var(--soft) 40%, transparent); }
+.markdown td, .markdown th {
+  padding: 10px 14px;
+  text-align: left;
+  border: 1px solid var(--border);
+  vertical-align: top;
+  min-width: 100px;
+  max-width: 32rem;
+  overflow-wrap: anywhere;
+}
 .data-table {
   border-collapse: collapse;
   width: 100%;
   font-size: 12px;
   table-layout: fixed;
 }
-.markdown td,
-.markdown th,
 .data-table td,
 .data-table th {
   padding: 13px 9px;
