@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
+import { PackagePlus, Plug, RefreshCw } from "lucide-react";
 import { native, errorMessage } from "./api";
 import { useWorkspace } from "./context";
-import { Badge, Button } from "./components";
+import { Actions, Badge, Button } from "./components";
 import type { ToolConnections as Connections, ToolHost, ToolInstallation } from "./types";
 
-const labels: Record<ToolHost, string> = {
-  codex: "Codex",
-  claude: "Claude Code",
-  antigravity: "Antigravity",
-};
+export const toolBranding = {
+  codex: { label: "Codex", logo: "/branding/codex.png" },
+  claude: { label: "Claude Code", logo: "/branding/claude.png" },
+  antigravity: { label: "Antigravity", logo: "/branding/antigravity.svg" },
+} satisfies Record<ToolHost, { label: string; logo: string }>;
 
 export function ToolConnections() {
   const { busy, perform } = useWorkspace();
@@ -38,7 +39,7 @@ export function ToolConnections() {
         throw result.installations.find((item) => item.error)?.error
           ?? new Error("스킬 등록을 마치지 못했습니다. 연결 상태를 다시 확인해 주세요.");
       }
-    }, `${labels[host]} 스킬을 등록했습니다. 도구를 다시 열고 SiloLink를 선택해 주세요.`);
+    }, `${toolBranding[host].label} 스킬을 등록했습니다. 도구를 다시 열고 SiloLink를 선택해 주세요.`);
   }
 
   return (
@@ -55,10 +56,13 @@ export function ToolConnections() {
       {error && <p role="alert">{error}</p>}
       {!connections && !error && <p role="status">스킬 등록 상태를 확인하고 있습니다.</p>}
       {connections?.tools.map((tool) => (
-        <section className="panel spaced" key={tool.host} aria-label={labels[tool.host]}>
+        <section className="panel spaced" key={tool.host} aria-labelledby={`tool-title-${tool.host}`}>
           <div className="section-heading" style={{ marginTop: 0 }}>
-            <h3>{labels[tool.host]}</h3>
-            <Badge accent={tool.status === "installed"}>
+            <h3 className="tool-title" id={`tool-title-${tool.host}`}>
+              <img className={`tool-logo--${tool.host}`} src={toolBranding[tool.host].logo} alt="" width="24" height="24" />
+              {toolBranding[tool.host].label}
+            </h3>
+            <Badge tone={tool.status === "installed" ? "success" : undefined}>
               {tool.status === "installed" ? "연결됨" : tool.status === "conflict" ? "기존 스킬 확인 필요" : tool.status === "update_available" ? "기능별 스킬 추가 가능" : "아직 연결하지 않음"}
             </Badge>
           </div>
@@ -76,15 +80,18 @@ export function ToolConnections() {
                 </p>
               )}
               {tool.status === "update_available" && <p className="small spaced-text">기존 통합 스킬을 유지하면서 기능별 선택 항목을 추가합니다.</p>}
-              <Button primary disabled={busy || tool.status === "conflict"} onClick={() => void connect(tool.host)}>
-                {tool.status === "update_available" ? `${labels[tool.host]} 스킬 업데이트` : `${labels[tool.host]}에 연결`}
-              </Button>
             </>
           )}
           {tool.host === "antigravity" && <p className="micro spaced-text">스킬 파일 등록을 지원합니다. Antigravity 앱에서의 발견·실행은 별도 확인이 필요합니다.</p>}
+          {tool.status !== "installed" && (
+            <Actions><Button primary aria-describedby={`tool-title-${tool.host}`} disabled={busy || tool.status === "conflict"} onClick={() => void connect(tool.host)}>
+              {tool.status === "update_available" ? <PackagePlus aria-hidden="true" /> : <Plug aria-hidden="true" />}
+              {tool.status === "update_available" ? "스킬 업데이트" : "연결"}
+            </Button></Actions>
+          )}
         </section>
       ))}
-      <Button quiet disabled={busy} onClick={() => void perform(refresh)}>연결 상태 다시 확인</Button>
+      <Actions><Button quiet disabled={busy} onClick={() => void perform(refresh)}><RefreshCw aria-hidden="true" />연결 상태 다시 확인</Button></Actions>
     </section>
   );
 }

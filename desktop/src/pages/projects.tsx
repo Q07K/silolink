@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { FileText, FolderPlus, RefreshCw } from "lucide-react";
+import { FileText, FolderPlus, GitCompareArrows, History, Import, ListChecks, MessageCircle, RefreshCw, Repeat2 } from "lucide-react";
 import { errorMessage, mutate, native } from "../api";
 import { useWorkspace } from "../context";
 import {
   Badge,
+  Actions,
   Button,
   Empty,
   Heading,
@@ -14,6 +15,7 @@ import {
 } from "../components";
 import type { DocumentItem } from "../types";
 import { when } from "../metrics";
+import { NoteExport } from "../note-export";
 
 function FirstProjectResult() {
   const { snapshot: s, projectId, navigate, busy, perform, refresh } = useWorkspace();
@@ -27,7 +29,6 @@ function FirstProjectResult() {
       {inventory?.error || !report ? (
         <>
           <p>{inventory?.error ? errorMessage(inventory.error) : "폴더는 연결했지만 문서 결과를 아직 불러오지 못했습니다."}</p>
-          <Button disabled={busy} onClick={() => void perform(refresh)}>문서 다시 확인</Button>
         </>
       ) : (
         <>
@@ -41,15 +42,18 @@ function FirstProjectResult() {
               ? `일부 문서를 확인하지 못했을 수 있습니다. 문서 목록에서 알림 ${report.warnings.length}개와 확인 범위를 살펴보세요.`
               : "선택한 폴더에서 읽을 수 있는 Markdown 문서를 확인했습니다."}
           </p>
-          {report.documents.length > 0 ? (
-            <Button primary onClick={() => navigate("docs")}>문서 {report.documents.length}개 살펴보기</Button>
-          ) : (
-            <Button disabled={busy} onClick={() => void perform(refresh)}>문서 다시 확인</Button>
-          )}
         </>
       )}
       <p className="small spaced-text">다음에는 AI 대화 기록을 가져와 이전에 요청한 내용도 함께 살펴볼 수 있습니다.</p>
-      <Button onClick={() => navigate("projects", "records")}>AI 기록 가져오기 설정</Button>
+      <Actions>
+        <Button quiet onClick={() => navigate("projects", "connect")}><FolderPlus aria-hidden="true" />다른 폴더 연결</Button>
+        <Button onClick={() => navigate("projects", "records")}><History aria-hidden="true" />AI 기록 가져오기 설정</Button>
+        {!inventory?.error && report?.documents.length ? (
+          <Button primary onClick={() => navigate("docs")}><FileText aria-hidden="true" />문서 {report.documents.length}개 살펴보기</Button>
+        ) : (
+          <Button disabled={busy} onClick={() => void perform(refresh)}><RefreshCw aria-hidden="true" />문서 다시 확인</Button>
+        )}
+      </Actions>
     </section>
   );
 }
@@ -63,16 +67,7 @@ function ConnectionPanel() {
       if (selected) setPath(selected);
     });
   }
-  async function storage() {
-    await perform(async () => {
-      const selected = await native<string | null>("choose_directory");
-      if (selected)
-        await mutate({
-          operation: "settings",
-          settings: { ...s.workspace.settings, stateDirectory: selected },
-        });
-    }, "저장 위치를 확인했습니다.");
-  }
+  const settings = s.workspace.settings;
   const collection = s.collections.find((c) => c.projectId === projectId);
   return (
     <>
@@ -115,32 +110,31 @@ function ConnectionPanel() {
             연결을 누르면 폴더 안에 SiloLink 관리 정보를 만듭니다.
             기존 문서 내용은 유지하며, 이미 연결한 폴더는 같은 프로젝트로 엽니다.
           </p>
-          <Button primary type="submit" disabled={busy || !path.trim()}>
+          <Actions><Button primary type="submit" disabled={busy || !path.trim()}>
             <FolderPlus />
             선택한 프로젝트 연결
-          </Button>
+          </Button></Actions>
         </form>
       </section>}
       {tab === "records" && <><section className="panel spaced">
         <div className="section-heading" style={{ marginTop: 0 }}>
           <h2>AI 기록 가져오기 · 선택 사항</h2>
-          <Button disabled={busy} onClick={() => void storage()}>
-            저장 폴더 선택
+          <Button onClick={() => navigate("settings", "collection")}>
+            저장 위치·수집 설정
           </Button>
         </div>
         <p className="small muted">
-          먼저 이 PC에서 AI 대화 기록과 문서 변경 전 백업을 보관할 폴더를 선택하세요.
-          문서 현황만 살펴볼 때는 설정하지 않아도 됩니다.
+          수집을 켜면 연결된 프로젝트의 Codex·Claude Code 대화를 이 PC에
+          저장합니다. 앱을 닫아도 트레이에서 주기적으로 수집합니다.
         </p>
         <div className="code">
-          {s.workspace.settings.stateDirectory || "아직 선택하지 않음"}
+          {settings.stateDirectory ?? s.defaultStateDirectory}
         </div>
-        <div className="inline">
+        {settings.backgroundEnabled && <Badge tone="success">AI 기록 자동 수집 켜짐</Badge>}
+        <Actions>
           <Button
-            primary
-            disabled={
-              busy || !projectId || !s.workspace.settings.stateDirectory
-            }
+            primary={settings.backgroundEnabled}
+            disabled={busy || !projectId}
             onClick={() =>
               void perform(
                 () => native("collect_records", { projectId }),
@@ -148,13 +142,24 @@ function ConnectionPanel() {
               )
             }
           >
-            <RefreshCw />
+            <Import aria-hidden="true" />
             AI 대화 기록 가져오기
           </Button>
-          <Button onClick={() => navigate("settings")}>
-            백그라운드 안내 설정
-          </Button>
-        </div>
+          {!settings.backgroundEnabled && (
+            <Button
+              primary
+              disabled={busy || !projectId}
+              onClick={() =>
+                void perform(
+                  () => mutate({ operation: "settings", settings: { ...settings, backgroundEnabled: true } }),
+                  "AI 기록 자동 수집을 켰습니다. 첫 결과는 아래에서 확인할 수 있습니다.",
+                )
+              }
+            >
+              <Repeat2 aria-hidden="true" />AI 기록 수집 켜기
+            </Button>
+          )}
+        </Actions>
       </section>
       <section className="panel spaced">
         <h3>현재 수집 범위</h3>
@@ -214,7 +219,7 @@ export function ProjectsPage() {
           </Button>
         }
       />
-      <Tabs
+      <Tabs label="프로젝트 보기"
         items={[
           ["overview", "현황"],
           ["rules", "공통·로컬 규칙"],
@@ -222,14 +227,9 @@ export function ProjectsPage() {
           ["connect", "폴더 연결"],
           ["records", "AI 기록 가져오기"],
         ]}
-      />
+      >
       {view === "connected" && project ? (
-        <>
-          <FirstProjectResult />
-          <Button quiet onClick={() => navigate("projects", "connect")}>
-            다른 폴더 연결
-          </Button>
-        </>
+        <FirstProjectResult />
       ) : view === "connect" || view === "records" || !project ? (
         <ConnectionPanel />
       ) : view === "overview" ? (
@@ -238,15 +238,15 @@ export function ProjectsPage() {
             <Badge accent>연결한 프로젝트</Badge>
             <h2>{project.name}</h2>
             <p>{project.root}</p>
-            <div className="inline">
-              <Button primary onClick={() => navigate("work")}>
-                작업·완료 기준 확인
+            <Actions>
+              <Button quiet onClick={() => navigate("projects", "records")}>
+                <History aria-hidden="true" />기록 수집 상태
               </Button>
               <PromptButton question="이 프로젝트의 요구사항과 문서를 근거로 현재 목표와 먼저 확인할 조건을 정리해줘." />
-              <Button quiet onClick={() => navigate("projects", "connect")}>
-                기록 수집 상태
+              <Button primary onClick={() => navigate("work")}>
+                <ListChecks aria-hidden="true" />작업·완료 기준 확인
               </Button>
-            </div>
+            </Actions>
           </section>
           <div className="section-heading">
             <h3>관련 문서와 결정</h3>
@@ -290,13 +290,17 @@ export function ProjectsPage() {
         </>
       ) : view === "rules" ? (
         <>
+          <NoteExport kind="rule" />
           <section className="panel">
             <h2>공통 기준과 로컬 예외</h2>
             <p className="small muted spaced-text">
               규칙 후보를 AI와 비교하고 실제 변경 전후·적용 대상·이력을
               확인합니다. 같은 표현만으로 자동 통합하지 않습니다.
             </p>
-            <div className="inline">
+            <Actions>
+              <Button onClick={() => navigate("change")}>
+                <GitCompareArrows aria-hidden="true" />변경안 검토·적용
+              </Button>
               <Button
                 primary
                 onClick={() =>
@@ -306,12 +310,9 @@ export function ProjectsPage() {
                   )
                 }
               >
-                AI와 규칙 비교
+                <MessageCircle aria-hidden="true" />AI와 규칙 비교
               </Button>
-              <Button onClick={() => navigate("change")}>
-                변경안 검토·적용
-              </Button>
-            </div>
+            </Actions>
           </section>
           {s.workspace.notes
             .filter((n) => n.kind === "rule")
@@ -353,13 +354,14 @@ export function ProjectsPage() {
               </p>
             </section>
           </div>
-          <PromptButton
+          <Actions><PromptButton
             text="관련 프로젝트를 선택해 비교"
             question="선택한 여러 프로젝트의 문서와 근거를 바탕으로 합치기·일부 분리·공통 코어 유지의 장단점과 의존 관계를 비교해줘. 모르는 조건은 추측하지 말고 확인할 질문으로 남겨줘."
             mode="analysis"
-          />
+          /></Actions>
         </section>
       )}
+      </Tabs>
     </>
   );
 }
@@ -375,11 +377,15 @@ export function DocumentsPage({
     openDocument,
     navigate,
     busy,
+    perform,
   } = useWorkspace();
   const [query, setQuery] = useState(""),
     [para, setPara] = useState(false),
     [document, setDocument] = useState<DocumentItem | null>(null),
     [readError, setReadError] = useState("");
+  const [searchResult, setSearchResult] = useState<{ status: string; matches: (DocumentItem & { snippet: string; line: number })[]; warnings: unknown[]; truncated: boolean } | null>(null);
+  const [searchedQuery, setSearchedQuery] = useState("");
+  useEffect(() => { setSearchResult(null); setQuery(""); setSearchedQuery(""); }, [projectId]);
   const view = tab || "documents";
   useEffect(() => {
     let active = true;
@@ -400,7 +406,7 @@ export function DocumentsPage({
   }, [selected, projectId, view]);
   if (!projectId) return <NoProject />;
   const inventory = s.inventories.find((i) => i.projectId === projectId);
-  const documents =
+  const documents: (DocumentItem & { snippet?: string; line?: number })[] = searchResult?.matches ??
     inventory?.report?.documents.filter((d) =>
       (d.title + " " + d.path).toLowerCase().includes(query.toLowerCase()),
     ) ?? [];
@@ -411,13 +417,13 @@ export function DocumentsPage({
         sub="원본의 위치와 현재 내용을 확인하고 필요한 맥락에 연결합니다."
         action={<Button onClick={() => navigate("change")}>정리 변경안</Button>}
       />
-      <Tabs
+      <Tabs label="문서 보기"
         items={[
           ["documents", "프로젝트 문서"],
           ["records", "도구별 기록"],
           ["reader", "선택한 문서"],
         ]}
-      />
+      >
       {view === "reader" ? (
         readError ? (
           <div role="alert" className="note">
@@ -436,12 +442,13 @@ export function DocumentsPage({
               documentPath={document.path}
               fragment={selected?.fragment}
             />
-            <div className="inline">
+            <Actions>
               <PromptButton
                 question={`이 문서(${document.path})의 판단 근거와 다른 프로젝트에 적용할 조건을 함께 살펴보자.`}
+                documents={[{ projectId, path: document.path, revision: document.revision }]}
               />
-              <Button onClick={() => navigate("change")}>내용 변경 검토</Button>
-            </div>
+              <Button onClick={() => navigate("change")}><GitCompareArrows aria-hidden="true" />내용 변경 검토</Button>
+            </Actions>
           </article>
         ) : (
           <Empty
@@ -470,10 +477,10 @@ export function DocumentsPage({
                 <p className="micro">
                   세션 {r.source.sessionId} · 원문 {r.id.slice(0, 12)}
                 </p>
-                <PromptButton
+                <Actions><PromptButton
                   question="이 기록의 의도와 다음에 더 확인할 조건을 함께 설명해줘."
                   ids={[r.id]}
-                />
+                /></Actions>
               </article>
             ))}
           {!s.records.some((r) => r.projectId === projectId) && (
@@ -498,16 +505,23 @@ export function DocumentsPage({
           <div className="inline spaced-text">
             <input
               type="search"
+              disabled={busy}
               aria-label="문서 찾기"
-              placeholder="제목·경로로 찾기"
+              placeholder="제목·경로로 찾기 또는 본문까지 검색"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => { setQuery(e.target.value); setSearchResult(null); }}
               style={{ flex: 1 }}
             />
+            <Button disabled={busy || !query.trim()} onClick={() => void perform(async () => {
+              const result = await native<NonNullable<typeof searchResult>>("search_documents", { projectId, query });
+              setSearchResult(result);
+              setSearchedQuery(query);
+            })}>본문까지 검색</Button>
             <Button aria-pressed={para} onClick={() => setPara((v) => !v)}>
               PARA 맥락 보기
             </Button>
           </div>
+          {searchResult && <p className="small" role="status">‘{searchedQuery}’ 검색 결과 {searchResult.matches.length}개{searchResult.truncated ? " · 처음 200개 표시" : ""}{searchResult.status !== "success" || searchResult.warnings.length ? " · 일부 문서를 읽지 못했습니다. 확인 가능한 문서의 결과입니다." : ""}</p>}
           {para && (
             <div className="note">
               원본 파일은 제자리에 둡니다. 문서는 프로젝트 근거로, 저장한
@@ -527,6 +541,7 @@ export function DocumentsPage({
                     </span>
                     <h3>{d.title || d.path}</h3>
                     <p>{d.path}</p>
+                    {d.snippet && <p className="small">{d.line}행 · {d.snippet}</p>}
                   </div>
                   <Button
                     disabled={busy}
@@ -538,9 +553,8 @@ export function DocumentsPage({
               ))}
             </section>
           ) : (
-            <Empty title="이 범위에는 읽을 문서가 없습니다">
-              초기화 여부·제외 규칙·문서 위치를 확인해 보세요. 없는 내용을 AI가
-              보충한 것으로 표시하지 않습니다.
+            <Empty title={searchResult ? "일치하는 문서가 없습니다" : "이 범위에는 읽을 문서가 없습니다"}>
+              {searchResult ? "검색어를 바꾸거나 프로젝트와 검색 범위를 확인해 주세요." : "초기화 여부·제외 규칙·문서 위치를 확인해 주세요."}
             </Empty>
           )}
           {inventory?.report?.proposals.length ? (
@@ -581,6 +595,7 @@ export function DocumentsPage({
           ) : null}
         </>
       )}
+      </Tabs>
     </>
   );
 }

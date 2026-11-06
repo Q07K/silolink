@@ -10,7 +10,6 @@ import hashlib
 import json
 import os
 import socket
-import sqlite3
 import subprocess
 import time
 import urllib.request
@@ -29,8 +28,8 @@ PROJECT.mkdir()
 ORIGINAL = '# Native desktop verification\r\n\r\n[Related document](guide.md)\r\n\r\nOriginal content.\r\n'
 (PROJECT / 'README.md').write_bytes(ORIGINAL.encode('utf-8'))
 (PROJECT / 'guide.md').write_bytes((ROOT / 'desktop/tests/fixtures/markdown.md').read_bytes())
-STATE = OUT / 'record-store'
 PROFILE = OUT / 'desktop-profile'
+STATE = PROFILE / 'Data'
 TOOL_HOME = OUT / 'tool-user'
 TOOL_HOME.mkdir()
 LEGACY_SKILL = TOOL_HOME / '.agents/skills/silolink'
@@ -39,7 +38,7 @@ LEGACY_BYTES = (ROOT / 'integrations/skills/silolink/SKILL.md').read_bytes()
 LEGACY_METADATA = (json.dumps({'schemaVersion':2,'product':'silolink','cliPath':str((EXE.parent / 'bin/silolink.exe').resolve())},ensure_ascii=False,indent=2) + '\n').encode('utf-8')
 (LEGACY_SKILL / 'SKILL.md').write_bytes(LEGACY_BYTES)
 (LEGACY_SKILL / 'installation.json').write_bytes(LEGACY_METADATA)
-FAKE_CLAUDE = OUT / 'empty-claude'
+FAKE_CLAUDE = OUT / 'fixture-claude'
 (FAKE_CLAUDE / 'projects').mkdir(parents=True)
 FIXTURE = ROOT / 'target' / 'debug' / 'silolink-desktop-provider-fixture.exe'
 errors = []
@@ -69,7 +68,7 @@ def launch(playwright, suffix):
     endpoint = f'http://127.0.0.1:{port}'
     for _ in range(150):
         if process.poll() is not None:
-            raise AssertionError(f'Native application exited: {(OUT / (suffix+".log")).read_text(errors="replace")}')
+            raise AssertionError(f'Native application exited ({process.returncode}): {(OUT / (suffix+".log")).read_text(errors="replace")}')
         try:
             urllib.request.urlopen(endpoint + '/json/version', timeout=.5).close()
             break
@@ -107,7 +106,7 @@ with sync_playwright() as playwright:
     process, browser, page, log = launch(playwright, 'first-run')
     try:
         assert invoke(page, 'workspace')['workspace']['projects'] == []
-        page.get_by_role('heading', name='첫 프로젝트부터 연결해 볼까요?').wait_for()
+        page.get_by_role('heading', name='프로젝트가 없습니다').wait_for()
         assert page.locator('.brand-icon').evaluate('(img)=>img.complete && img.naturalWidth>0 && img.src.endsWith("/branding/silolink-app-icon.png")')
         original_size = page.evaluate('({width:innerWidth,height:innerHeight})')
         for width in [1320, 1040]:
@@ -117,7 +116,7 @@ with sync_playwright() as playwright:
                 alignment = page.evaluate('''()=>{
                     const brand=document.querySelector('.app-brand').getBoundingClientRect();
                     const sidebar=document.querySelector('.sidebar').getBoundingClientRect();
-                    const meta=document.querySelector('.titlebar-meta').getBoundingClientRect();
+                    const meta=document.querySelector('.titlebar .contextbar').getBoundingClientRect();
                     const icon=document.querySelector('.brand-icon').getBoundingClientRect();
                     const navIcon=document.querySelector('.sidebar nav svg').getBoundingClientRect();
                     return {brandLeft:brand.left,sidebarLeft:sidebar.left,brandRight:brand.right,
@@ -138,8 +137,8 @@ with sync_playwright() as playwright:
             ('claude', 'Claude Code', '.claude/skills/silolink'),
             ('antigravity', 'Antigravity', '.gemini/config/skills/silolink'),
         ]:
-            button = f'{label} 스킬 업데이트' if host == 'codex' else f'{label}에 연결'
-            page.get_by_role('button', name=button, exact=True).click()
+            button = '스킬 업데이트' if host == 'codex' else '연결'
+            page.get_by_role('region', name=label, exact=True).get_by_role('button', name=button, exact=True).click()
             expect(page.get_by_role('region', name=label, exact=True)).to_contain_text('연결됨')
             tool = next(item for item in invoke(page,'tool_connections')['tools'] if item['host'] == host)
             assert len(tool['skills']) == 11 and 'silolink-init' in tool['skills']
@@ -177,12 +176,14 @@ with sync_playwright() as playwright:
         expect(page.get_by_role('region', name='Claude Code', exact=True)).to_contain_text('연결됨')
         page.screenshot(path=str(OUT / 'tool-connections.png'))
         checks.append('real app registers three user skills using its bundled CLI, empty-PATH init/docs, reentry and edited-skill preservation')
-        page.locator('.sidebar nav').get_by_role('button', name='요약', exact=True).click()
+        page.get_by_role('button', name='작업 공간으로', exact=True).click()
+        expect(page.get_by_role('navigation', name='주요 탐색').get_by_role('button', name='요약', exact=True)).to_have_attribute('aria-current', 'page')
         page.get_by_role('button', name='프로젝트 연결', exact=True).click()
         page.get_by_role('textbox', name='프로젝트 폴더', exact=True).fill(str(PROJECT))
         assert page.locator('form input[type="checkbox"]').count() == 0
         page.get_by_role('button', name='선택한 프로젝트 연결', exact=True).click()
-        expect(page.locator('.app-footer')).to_contain_text('1개 프로젝트')
+        expect(page.get_by_role('combobox', name='현재 프로젝트')).to_contain_text(PROJECT.name)
+        expect(page.get_by_role('combobox', name='현재 프로젝트').locator('option')).to_have_count(1)
         page.get_by_role('heading', name='첫 문서 확인', exact=True).wait_for()
         page.screenshot(path=str(OUT / 'first-documents.png'))
         page.get_by_role('button', name='문서 2개 살펴보기', exact=True).click()
@@ -190,31 +191,46 @@ with sync_playwright() as playwright:
         assert (PROJECT / 'README.md').read_bytes() == ORIGINAL.encode('utf-8')
         snapshot = invoke(page, 'workspace')
         project_id = snapshot['workspace']['projects'][0]['id']
-        settings = dict(snapshot['workspace']['settings'], stateDirectory=str(STATE))
-        invoke(page, 'mutate', {'request':{'operation':'settings','settings':settings}})
-        page.get_by_role('button', name='새로고침', exact=True).click()
-        page.locator('.sidebar nav').get_by_role('button', name='프로젝트', exact=True).click()
-        page.get_by_role('button', name='AI 기록 가져오기', exact=True).click()
-        page.get_by_role('button', name='AI 대화 기록 가져오기', exact=True).click()
-        expect(page.locator('.status-banner')).to_contain_text('수집을 마쳤')
-        assert (STATE / 'silolink.sqlite').exists()
-        now = datetime.now(timezone.utc).isoformat()
-        with sqlite3.connect(STATE / 'silolink.sqlite') as db:
-            for index, role in enumerate(['user','assistant','user']):
-                record_id = hashlib.sha256(f'record:{index}'.encode()).hexdigest()
+        assert Path(snapshot['defaultStateDirectory']) == STATE
+        assert snapshot['workspace']['settings']['stateDirectory'] is None
+        assert not snapshot['workspace']['settings']['backgroundEnabled']
+        assert not STATE.exists()
+        encoded = ''.join(c if c.isascii() and c.isalnum() else '-' for c in str(PROJECT))
+        transcript_dir = Path('\\\\?\\' + str(FAKE_CLAUDE / 'projects' / encoded))
+        transcript_dir.mkdir()
+        session_id = str(uuid.uuid4())
+        parent = None
+        with (transcript_dir / f'{session_id}.jsonl').open('w', encoding='utf-8') as transcript:
+            for role in ['user', 'assistant', 'user']:
+                item_id = str(uuid.uuid4())
                 text = '잘해줘' if role == 'user' else '테스트 공급자의 이력 응답'
-                revision = hashlib.sha256(text.encode()).hexdigest()
-                record = {'schemaVersion':1,'id':record_id,'revision':revision,'projectId':project_id,'source':{'provider':'codex' if index<2 else 'claude','sessionId':'fixture-session','itemId':str(index)},'role':role,'text':text,'textParts':[text],'occurredAt':now,'timeBasis':'message','observedAt':now,'phase':None}
-                db.execute('INSERT INTO records(project_id,record_id,revision,payload) VALUES (?,?,?,?)',(project_id,record_id,revision,json.dumps(record,ensure_ascii=False)))
-        page.get_by_role('button', name='새로고침', exact=True).click()
-        expect(page.locator('.app-footer')).to_contain_text('3개 기록')
+                item = {'uuid':item_id,'parentUuid':parent,'sessionId':session_id,'cwd':str(PROJECT),'timestamp':datetime.now(timezone.utc).isoformat(),'type':role,'message':{'role':role,'content':text}}
+                transcript.write(json.dumps(item, ensure_ascii=False) + '\n')
+                parent = item_id
+        page.locator('.sidebar nav').get_by_role('button', name='프로젝트', exact=True).click()
+        page.get_by_role('tab', name='AI 기록 가져오기', exact=True).click()
+        expect(page.get_by_text(str(STATE), exact=True)).to_be_visible()
+        assert not STATE.exists()
+        page.get_by_role('button', name='AI 기록 수집 켜기', exact=True).click()
+        expect(page.get_by_text('마지막 반영', exact=False)).to_contain_text('success')
+        assert (STATE / 'silolink.sqlite').exists()
         snapshot = invoke(page,'workspace')
+        assert len(snapshot['records']) == 3
         assert snapshot['analysis']['userRequests'] == 2
         assert snapshot['analysis']['repeatedRequests'][0]['count'] == 2
-        checks.append('native connect, core init, collection, saved record scope, request-only analysis')
+        page.get_by_role('button', name='일간·주간 회고', exact=True).click()
+        expect(page.get_by_role('heading', name='2개의 요청이 남아 있습니다.', exact=True)).to_be_visible()
+        page.locator('.sidebar-bottom').get_by_role('button', name='설정', exact=True).click()
+        page.get_by_role('navigation', name='설정 분류').get_by_role('button', name='기록·수집', exact=True).click()
+        page.get_by_label('백그라운드 수집과 안내', exact=True).uncheck()
+        page.get_by_role('button', name='설정 저장', exact=True).click()
+        expect(page.get_by_role('status')).to_contain_text('설정을 저장했습니다.')
+        checks.append('native connect, opt-in imports actual fixture transcript to the default folder before the first interval, and daily review updates')
 
         def nav(label):
-            page.locator('.sidebar nav').get_by_role('button',name=label,exact=True).click()
+            if page.get_by_role('navigation', name='설정 분류').count():
+                page.get_by_role('button', name='작업 공간으로', exact=True).click()
+            page.get_by_role('navigation', name='주요 탐색').get_by_role('button',name=label,exact=True).click()
         nav('기록·문서')
         page.get_by_role('button',name='읽기',exact=True).first.click()
         page.locator('.markdown').wait_for()
@@ -259,9 +275,11 @@ with sync_playwright() as playwright:
         checks.append('real document read, internal Markdown navigation, HTML isolation, path traversal denied')
 
         nav('학습')
-        page.get_by_label('개념·주제',exact=True).fill('부분 실패의 처리 조건')
-        page.get_by_label('요청 문맥·의미·근거·다음 적용',exact=True).fill('성공 결과를 보존하고 실패 범위를 표시한다.')
+        page.get_by_role('button', name='학습 주제 추가', exact=True).click()
+        page.get_by_label('학습 주제',exact=True).fill('부분 실패의 처리 조건')
+        page.get_by_label('배운 내용과 적용할 일',exact=True).fill('성공 결과를 보존하고 실패 범위를 표시한다.')
         page.get_by_role('button',name='학습 주제 저장',exact=True).click()
+        expect(page.get_by_role('button',name='부분 실패의 처리 조건')).to_be_focused()
         page.get_by_role('button',name='다음 작업에 적용',exact=True).click()
         nav('작업·일정')
         page.get_by_role('button',name='본인 작업 기록',exact=True).click()
@@ -272,11 +290,13 @@ with sync_playwright() as playwright:
         checks.append('learning persisted, linked task, real timer start/stop, no invented user-test completion')
 
         nav('조사')
-        page.get_by_role('button',name='근거 추가',exact=True).click()
+        page.get_by_role('button',name='자료 추가',exact=True).click()
+        expect(page.get_by_label('자료 이름',exact=True)).to_be_focused()
         page.get_by_label('자료 이름',exact=True).fill('검증용 공식 근거')
         page.get_by_label('HTTPS 원문 링크',exact=True).fill('https://example.org/reference')
-        page.get_by_label('확인할 주장·찬반 이유',exact=True).fill('원문 미확인 상태를 보존하는 검증 자료')
-        page.get_by_role('button',name='근거 저장',exact=True).click()
+        page.get_by_label('자료에서 확인할 내용',exact=True).fill('원문 미확인 상태를 보존하는 검증 자료')
+        page.get_by_role('button',name='자료 저장',exact=True).click()
+        expect(page.get_by_role('button',name='검증용 공식 근거')).to_be_focused()
         page.get_by_text('원문 확인 필요',exact=True).wait_for()
         assert invoke(page,'workspace')['workspace']['sources'][0]['verified'] is False
         checks.append('research source kind, claim, URL and unverified state persisted')
@@ -320,7 +340,8 @@ with sync_playwright() as playwright:
         assert (PROJECT/'README.md').read_bytes()==ORIGINAL.encode()
         checks.append('real core plan check, external edit preserved, apply, journal read, byte-exact undo')
 
-        page.get_by_role('button',name='새 대화',exact=True).click()
+        nav('대화')
+        page.get_by_role('button', name='자료 선택', exact=True).click()
         page.get_by_role('button',name='최근 요청 30개 선택',exact=True).click()
         page.get_by_role('textbox',name='질문 입력',exact=True).fill('선택한 요청에서 더 확인할 조건을 설명해줘.')
         page.get_by_role('button',name='질문하기',exact=True).click()
@@ -350,9 +371,11 @@ with sync_playwright() as playwright:
         assert not process_alive(child_pid),'Cancelled provider process is still alive'
         checks.append('real child process output, selected evidence, provider switch, context carryover, failure, cancellation and child termination')
 
-        page.locator('.sidebar-bottom').get_by_role('button',name='알림·설정',exact=True).click()
+        page.locator('.sidebar-bottom').get_by_role('button',name='설정',exact=True).click()
+        page.get_by_role('navigation', name='설정 분류').get_by_role('button', name='알림·회고', exact=True).click()
         page.get_by_label('하루 마감 시각',exact=True).fill('22:10')
         page.get_by_role('combobox',name='주간 회고 요일',exact=True).select_option('4')
+        page.get_by_role('navigation', name='설정 분류').get_by_role('button', name='화면', exact=True).click()
         page.get_by_role('combobox',name='화면 테마',exact=True).select_option('dark')
         page.get_by_role('button',name='설정 저장',exact=True).click()
         page.get_by_role('status').get_by_text('설정을 저장했습니다.',exact=True).wait_for()
@@ -370,7 +393,8 @@ with sync_playwright() as playwright:
             assert result.returncode == 0, result.stderr.decode('utf-8')
         # No IPC workspace read or refresh button before the visible assertion:
         # this must be delivered by the running application's discovery event.
-        expect(page.locator('.app-footer')).to_contain_text('2개 프로젝트')
+        expect(page.get_by_role('combobox', name='현재 프로젝트')).to_contain_text(live_project.name)
+        expect(page.get_by_role('combobox', name='현재 프로젝트').locator('option')).to_have_count(2)
         after = invoke(page, 'workspace')
         assert len(after['workspace']['projects']) == 2
         for key in ['notes', 'settings', 'chats', 'tasks']:
@@ -389,7 +413,56 @@ with sync_playwright() as playwright:
         checks.append('CLI skill init appears live without refresh/background collection, repeat is deduplicated, documents visible and existing workspace preserved')
         nav('요약')
         page.screenshot(path=str(OUT/'native-home.png'))
-        page.locator('.sidebar-bottom').get_by_role('button',name='알림·설정',exact=True).click()
+        # The redesigned navigation exposes every destination, including contextual pages.
+        review_size = page.evaluate('({width:innerWidth,height:innerHeight})')
+        for width, height in [(1320, 900), (1040, 800), (960, 640)]:
+            page.set_viewport_size({'width':width, 'height':height})
+            for theme in ['light', 'dark']:
+                page.evaluate('(theme)=>document.documentElement.dataset.theme=theme', theme)
+                for label in ['요약', '대화', '작업·일정', '일간·주간 회고', '기록·문서', '사용 분석', '조사', '학습', '프로젝트', '변경안 검토']:
+                    menu = page.get_by_role('navigation', name='주요 탐색').get_by_role('button', name=label, exact=True)
+                    page.locator('.workspace').evaluate('(el)=>el.scrollTop=el.scrollHeight')
+                    menu.click()
+                    expect(menu).to_have_attribute('aria-current', 'page')
+                    assert page.locator('.sidebar [aria-current="page"]').count() == 1
+                    expect(page.locator('.page h1')).to_have_count(1)
+                    if label == '요약':
+                        expect(page.get_by_role('table', name='연결한 프로젝트')).to_be_visible()
+                    else:
+                        expect(page.locator('.page h1')).to_be_in_viewport()
+                    assert page.get_by_role('combobox', name='현재 프로젝트').input_value() == project_id
+                    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'), (width, theme, label)
+                    assert page.locator('.workspace').evaluate('(el)=>el.scrollWidth <= el.clientWidth'), (width, theme, label)
+                nav('요약')
+                page.locator('.workspace').evaluate('(el)=>el.scrollTop=0')
+                page.screenshot(path=str(OUT / f'redesign-{theme}-{width}.png'))
+                settings_menu = page.locator('.sidebar-bottom').get_by_role('button', name='설정', exact=True)
+                settings_menu.click()
+                settings_nav = page.get_by_role('navigation', name='설정 분류')
+                assert settings_nav.evaluate('(el)=>!!el.closest("#app-navigation")')
+                expect(page.get_by_role('navigation', name='주요 탐색')).to_have_count(0)
+                expect(settings_nav.get_by_role('button', name='AI 도구', exact=True)).to_have_attribute('aria-current', 'page')
+                page.get_by_role('button', name='사이드바 접기', exact=True).click()
+                assert page.locator('.sidebar').bounding_box()['width'] == 72
+                settings_nav.get_by_role('button', name='화면', exact=True).click()
+                expect(page.get_by_role('combobox', name='화면 테마', exact=True)).to_be_visible()
+                assert page.locator('.workspace').evaluate('(el)=>el.scrollWidth <= el.clientWidth')
+                page.get_by_role('button', name='작업 공간으로', exact=True).click()
+                expect(page.get_by_role('navigation', name='주요 탐색').get_by_role('button', name='요약', exact=True)).to_have_attribute('aria-current', 'page')
+                compact_docs = page.get_by_role('navigation', name='주요 탐색').get_by_role('button', name='기록·문서', exact=True)
+                compact_docs.hover()
+                expect(page.get_by_role('tooltip')).to_have_text('기록·문서')
+                compact_docs.click()
+                expect(compact_docs).to_have_attribute('aria-current', 'page')
+                assert page.get_by_role('combobox', name='현재 프로젝트').input_value() == project_id
+                assert page.locator('.workspace').evaluate('(el)=>el.scrollWidth <= el.clientWidth')
+                page.screenshot(path=str(OUT / f'folded-{theme}-{width}.png'))
+                page.get_by_role('button', name='사이드바 펼치기', exact=True).click()
+        page.set_viewport_size(review_size)
+        page.evaluate('document.documentElement.dataset.theme="dark"')
+        checks.append('all ten menu destinations and settings show current location, preserve project scope and avoid horizontal overflow at 1320/1040/960 in both themes')
+        page.locator('.sidebar-bottom').get_by_role('button',name='설정',exact=True).click()
+        page.get_by_role('navigation', name='설정 분류').get_by_role('button', name='앱 관리', exact=True).click()
         page.get_by_role('button',name='앱 완전히 종료',exact=True).click()
         process.wait(timeout=10)
         log.close()
@@ -403,7 +476,26 @@ with sync_playwright() as playwright:
         assert len(restored['projects'])==2 and len(restored['tasks'])==1 and len(restored['notes'])==2
         assert restored['tasks'][0]['spans'][0]['endedAt'] is not None
         checks.append('clean exit, restart, project/notes/source/task/timer/chat/review settings persisted')
-        page.locator('.sidebar-bottom').get_by_role('button',name='알림·설정',exact=True).click()
+        custom_state = OUT / 'custom-record-store'
+        invoke(page, 'mutate', {'request':{'operation':'settings','settings':dict(restored['settings'], stateDirectory=str(custom_state))}})
+        page.get_by_role('button', name='새로고침', exact=True).click()
+        nav('프로젝트')
+        page.get_by_role('tab', name='AI 기록 가져오기', exact=True).click()
+        expect(page.get_by_text(str(custom_state), exact=True)).to_be_visible()
+        page.get_by_role('combobox', name='현재 프로젝트', exact=True).select_option(project_id)
+        page.get_by_role('button', name='AI 대화 기록 가져오기', exact=True).click()
+        expect(page.locator('.status-banner')).to_contain_text('수집을 마쳤')
+        assert (custom_state / 'silolink.sqlite').is_file()
+        assert (STATE / 'silolink.sqlite').is_file()
+        page.locator('.sidebar-bottom').get_by_role('button',name='설정',exact=True).click()
+        page.get_by_role('navigation', name='설정 분류').get_by_role('button', name='기록·수집', exact=True).click()
+        page.get_by_role('button', name='기본 위치 사용', exact=True).click()
+        page.get_by_role('button', name='설정 저장', exact=True).click()
+        expect(page.get_by_role('status')).to_contain_text('설정을 저장했습니다.')
+        assert invoke(page, 'workspace')['workspace']['settings']['stateDirectory'] is None
+        assert (custom_state / 'silolink.sqlite').is_file()
+        checks.append('custom directory overrides the default for manual collection and both stores remain intact after returning to the default')
+        page.get_by_role('navigation', name='설정 분류').get_by_role('button', name='앱 관리', exact=True).click()
         page.get_by_role('button',name='앱 완전히 종료',exact=True).click()
         process.wait(timeout=10)
     except Exception:

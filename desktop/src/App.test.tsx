@@ -43,7 +43,10 @@ it("기존 통합 스킬만 설치되어 있으면 기능별 스킬을 추가하
   });
   render(<App />);
   fireEvent.click(await screen.findByRole("button", { name: "AI 도구 연결" }));
-  fireEvent.click(await screen.findByRole("button", { name: "Codex 스킬 업데이트" }));
+  const codex = await screen.findByRole("region", { name: "Codex" });
+  const update = within(codex).getByRole("button", { name: "스킬 업데이트" });
+  expect(update.querySelector("svg.lucide-package-plus")?.getAttribute("aria-hidden")).toBe("true");
+  fireEvent.click(update);
   expect(await screen.findByText("연결됨")).toBeTruthy();
   expect(vi.mocked(native)).toHaveBeenCalledWith("connect_tool", { host: "codex" });
 });
@@ -59,7 +62,8 @@ it.each([["codex", "Codex"], ["claude", "Claude Code"], ["antigravity", "Antigra
     });
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: "AI 도구 연결" }));
-    const connect = await screen.findByRole("button", { name: `${label}에 연결` });
+    const card = await screen.findByRole("region", { name: label });
+    const connect = within(card).getByRole("button", { name: "연결" });
     fireEvent.click(connect);
     await waitFor(() => expect(within(screen.getByRole("region", { name: label })).getByText("연결됨")).toBeTruthy());
     expect(vi.mocked(native)).toHaveBeenCalledWith("connect_tool", { host });
@@ -83,14 +87,15 @@ it("스킬 상태 조회 실패는 재시도할 수 있고 기존 스킬 충돌�
   readable = true;
   fireEvent.click(screen.getByRole("button", { name: "연결 상태 다시 확인" }));
   expect(await screen.findByText("기존 스킬 확인 필요")).toBeTruthy();
-  expect((screen.getByRole("button", { name: "Codex에 연결" }) as HTMLButtonElement).disabled).toBe(true);
+  const codex = screen.getByRole("region", { name: "Codex" });
+  expect((within(codex).getByRole("button", { name: "연결" }) as HTMLButtonElement).disabled).toBe(true);
   expect(vi.mocked(native).mock.calls.some(([command]) => command === "connect_tool")).toBe(false);
 });
 it("빈 설치는 예시 통계를 만들어내지 않고 연결 행동과 핵심 화면을 제공한다", async () => {
   render(<App />);
   expect(
     await screen.findByRole("heading", {
-      name: "첫 프로젝트부터 연결해 볼까요?",
+      name: "프로젝트가 없습니다",
     }),
   ).toBeTruthy();
   expect(screen.getByRole("button", { name: "프로젝트 연결" })).toBeTruthy();
@@ -182,6 +187,30 @@ it.each(["success", "partial"])("문서가 없는 %s 결과도 실제 범위와 
   expect(Boolean(screen.queryByText(/일부 문서를 확인하지 못했을 수 있습니다/))).toBe(status === "partial");
   expect(screen.queryByRole("button", { name: /문서 \d+개 살펴보기/ })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "AI 기록 가져오기 설정" }));
-  expect(screen.getByRole("button", { name: "저장 폴더 선택" })).toBeTruthy();
-  expect((screen.getByRole("button", { name: "AI 대화 기록 가져오기" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByText(emptySnapshot.defaultStateDirectory)).toBeTruthy();
+  expect(vi.mocked(native)).not.toHaveBeenCalledWith("collect_records", expect.anything());
+});
+
+it("연결한 프로젝트의 기록 수집을 저장 폴더 선택 없이 켤 수 있다", async () => {
+  const connected = structuredClone(emptySnapshot);
+  connected.workspace.projects = [{ id: "linked", name: "스킬 연결 프로젝트", root: "C:\\linked" }];
+  vi.mocked(loadWorkspace).mockResolvedValue(connected);
+  vi.mocked(mutate).mockImplementation(async () => {
+    const enabled = structuredClone(connected);
+    enabled.workspace.settings.backgroundEnabled = true;
+    vi.mocked(loadWorkspace).mockResolvedValue(enabled);
+    return { id: null };
+  });
+  render(<App />);
+  fireEvent.click(await screen.findByRole("button", { name: "프로젝트" }));
+  fireEvent.click(screen.getByRole("tab", { name: "AI 기록 가져오기" }));
+  expect(screen.getByText(emptySnapshot.defaultStateDirectory)).toBeTruthy();
+  expect(vi.mocked(mutate)).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "AI 기록 수집 켜기" }));
+  await waitFor(() => expect(vi.mocked(mutate)).toHaveBeenCalledWith({
+    operation: "settings",
+    settings: { ...connected.workspace.settings, backgroundEnabled: true },
+  }));
+  expect(await screen.findByText("AI 기록 자동 수집 켜짐")).toBeTruthy();
+  expect(vi.mocked(native)).not.toHaveBeenCalledWith("choose_directory");
 });

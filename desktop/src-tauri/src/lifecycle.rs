@@ -20,29 +20,50 @@ pub async fn project_connections(app: AppHandle, runtime: Arc<Runtime>) {
 
 pub async fn background(app: AppHandle, runtime: Arc<Runtime>) {
     use chrono::{Datelike, Timelike};
-    let mut last_collection = std::time::Instant::now()
-        .checked_sub(std::time::Duration::from_secs(86400))
-        .unwrap_or_else(std::time::Instant::now);
+    let mut collection_settings = runtime.collection_settings_changed.subscribe();
+    let mut last_collection: Option<std::time::Instant> = None;
     loop {
-        tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+        tokio::select! {
+            _ = collection_settings.changed() => last_collection = None,
+            _ = tokio::time::sleep(std::time::Duration::from_secs(30)) => {}
+        }
         let data = match lock(&runtime.repository) {
-            Ok(repo) => repo.data.clone(),
+            Ok(repo) => {
+                // Consume updates that arrived between waking and reading the settings.
+                if collection_settings.has_changed().unwrap_or(false) {
+                    collection_settings.borrow_and_update();
+                    last_collection = None;
+                }
+                repo.data.clone()
+            }
             Err(_) => continue,
         };
         if !data.settings.background_enabled {
             continue;
         }
-        if data.settings.state_directory.is_some()
-            && last_collection.elapsed().as_secs() >= data.settings.collection_interval_secs
+        if !data.projects.is_empty()
+            && last_collection.is_none_or(|last| {
+                last.elapsed().as_secs() >= data.settings.collection_interval_secs
+            })
         {
             for project in &data.projects {
-                let result = super::runtime::collect(runtime.clone(), project.id.clone()).await;
+                if collection_settings.has_changed().unwrap_or(false) {
+                    break;
+                }
+                let result = super::runtime::collect(&runtime, &project.id, true).await;
+                if result
+                    .as_ref()
+                    .is_err_and(|e| e.code == "COLLECTION_DISABLED")
+                {
+                    break;
+                }
                 let _ = app.emit(
                     "collection-finished",
-                    json!({"projectId":project.id,"success":result.is_ok()}),
+                    json!({"projectId":project.id,"error":result.err().map(|e| e.json())}),
                 );
             }
-            last_collection = std::time::Instant::now();
+            last_collection = Some(std::time::Instant::now());
+            crate::insight::maybe_auto_analyze(&app, &runtime);
         }
         let offset = chrono::FixedOffset::east_opt(if data.settings.timezone == "Asia/Seoul" {
             9 * 3600
@@ -77,29 +98,21 @@ pub async fn background(app: AppHandle, runtime: Arc<Runtime>) {
                 );
             }
         }
-        if data.settings.immediate_notifications {
-            let rt = runtime.clone();
-            if let Ok(Ok(snapshot)) =
-                tauri::async_runtime::spawn_blocking(move || rt.snapshot()).await
-                && let Some(groups) = snapshot["analysis"]["repeatedRequests"].as_array()
-            {
-                for group in groups.iter().take(3) {
-                    let fingerprint =
-                        format!("repeat:{}:{}", group["recordIds"][0], group["count"]);
-                    notify_once(
-                        &app,
-                        &runtime,
-                        &fingerprint,
-                        "pattern",
-                        "반복된 요청을 발견했습니다. 원문과 맥락을 확인해 보세요.",
-                        true,
-                    );
-                }
-            }
+        // Repeated-request discoveries need no model; announce them as soon as they appear.
+        let rt = runtime.clone();
+        let ids: Vec<String> = data.projects.iter().map(|p| p.id.clone()).collect();
+        if let Ok(Ok(items)) = tauri::async_runtime::spawn_blocking(move || {
+            let (records, _) = crate::insight::records_for(&rt, &ids)?;
+            let analysis = silolink::desktop::analyze_records(&records);
+            crate::insight::refresh_local(&rt, &records, &analysis)
+        })
+        .await
+        {
+            crate::insight::announce(&app, &runtime, &items, data.settings.immediate_notifications);
         }
     }
 }
-fn notify_once(
+pub(crate) fn notify_once(
     app: &AppHandle,
     runtime: &Runtime,
     id: &str,

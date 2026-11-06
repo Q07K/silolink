@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Plus, Upload, X } from "lucide-react";
+import { FileInput, Plus, X } from "lucide-react";
 import { native } from "../api";
 import { useWorkspace } from "../context";
-import { Badge, Button, Heading, NoProject } from "../components";
+import { Actions, Badge, Button, Field, Heading, NoProject } from "../components";
 import { when } from "../metrics";
 import type {
   ChangePlan,
@@ -26,7 +26,7 @@ interface Draft {
   text: string;
 }
 export function ChangesPage() {
-  const { snapshot: s, projectId, busy, perform } = useWorkspace();
+  const { snapshot: s, projectId, busy, perform, pendingPlan, clearPendingPlan } = useWorkspace();
   const [advanced, setAdvanced] = useState(false),
     [jsonText, setJsonText] = useState("");
   const [path, setPath] = useState(""),
@@ -48,6 +48,14 @@ export function ChangesPage() {
     setPath("");
     setJsonText("");
   }, [projectId]);
+  useEffect(() => {
+    // Plans generated elsewhere (rules) arrive here and are checked like an imported plan.
+    if (!pendingPlan || pendingPlan.projectId !== projectId) return;
+    clearPendingPlan?.();
+    setRationale(pendingPlan.rationale);
+    void inspect(pendingPlan);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPlan, projectId]);
   if (!projectId) return <NoProject />;
   const documents =
     s.inventories.find((i) => i.projectId === projectId)?.report?.documents ??
@@ -133,195 +141,102 @@ export function ChangesPage() {
               })
             }
           >
-            <Upload />
+            <FileInput aria-hidden="true" />
             변경안 가져오기
           </Button>
         }
       />
-      <section className="panel">
-        <div className="section-heading" style={{ marginTop: 0 }}>
-          <h3>
-            {advanced ? "호스트 AI·CLI에서 만든 변경안" : "문서 정리 제안 작성"}
-          </h3>
-          <Button
-            quiet
-            onClick={() => {
-              setAdvanced((v) => !v);
-              setCheck(null);
-            }}
-          >
+      <section className="panel change-editor">
+        <div className="section-heading">
+          <h2>{advanced ? "호스트 AI·CLI에서 만든 변경안" : "변경안 작성"}</h2>
+          <Button quiet disabled={busy} aria-expanded={advanced} onClick={() => {
+            setAdvanced((value) => !value);
+            setCheck(null);
+          }}>
             {advanced ? "본문으로 작성하기" : "고급 · JSON 직접 입력"}
           </Button>
         </div>
-        {advanced ? (
-          <>
-            <p className="small muted spaced-text">
-              기존 CLI와 같은 변경안 형식을 사용합니다. 내용을 편집하면 다시
-              검사해야 합니다.
-            </p>
-            <textarea
-              aria-label="문서 변경안 JSON"
-              value={jsonText}
-              onChange={(e) => {
-                setJsonText(e.target.value);
+        <form className="form-stack" aria-label="변경안 작성" onSubmit={(event) => {
+          event.preventDefault();
+          if (!busy && (advanced ? jsonText.trim() : rationale.trim() && combinedOperations().length)) void inspect();
+        }}>
+          {advanced ? <>
+            <p className="muted">가져온 변경안을 확인하거나 JSON을 붙여 넣으세요. 수정한 내용은 다시 검사합니다.</p>
+            <Field label="문서 변경안 JSON">
+              <textarea className="change-json" value={jsonText} onChange={(event) => {
+                setJsonText(event.target.value);
                 setCheck(null);
-              }}
-              placeholder='{"schemaVersion":1,"id":"...","projectId":"...","rationale":"...","operations":[],"guards":[]}'
-              style={{ minHeight: 180, fontFamily: "Consolas,monospace" }}
-            />
-            <Button
-              primary
-              disabled={busy || !jsonText.trim()}
-              onClick={() => void inspect()}
-            >
-              원문·영향 검사
-            </Button>
-          </>
-        ) : (
-          <>
-            <p className="small muted">
-              문서 내용을 다듬거나, 새 문서로 합친 뒤 기존 문서를 삭제하는
-              변경을 함께 검토할 수 있습니다.
-            </p>
-            <label className="spaced-text">
-              정리 이유
-              <input
-                aria-label="정리 이유"
-                value={rationale}
-                maxLength={1000}
-                onChange={(e) => {
-                  setRationale(e.target.value);
-                  setCheck(null);
-                }}
-                style={{ display: "block", width: "100%", marginTop: 8 }}
-              />
-            </label>
-            <div className="inline">
-              <select
-                aria-label="수정할 문서"
-                value={path}
-                onChange={(e) => setPath(e.target.value)}
-                style={{ flex: 1 }}
-              >
-                <option value="">문서 선택</option>
-                {documents.map((d) => (
-                  <option key={d.id} value={d.path}>
-                    {d.title || d.path} · {d.path}
-                  </option>
-                ))}
-              </select>
-              <Button disabled={busy || !path} onClick={() => void read()}>
-                내용 불러오기
-              </Button>
-              <Button
-                onClick={() => {
-                  setDraft({ path: "", revision: null, text: "" });
-                  setContent("");
-                  setRemove(false);
-                  setCheck(null);
-                }}
-              >
-                <Plus />새 문서
-              </Button>
-            </div>
-            {draft && (
-              <div className="spaced">
-                {draft.revision === null ? (
-                  <label>
-                    새 문서 경로
-                    <input
-                      aria-label="새 문서 경로"
-                      placeholder="docs/architecture.md"
-                      value={draft.path}
-                      onChange={(e) => {
-                        setDraft({ ...draft, path: e.target.value });
-                        setCheck(null);
-                      }}
-                      style={{ display: "block", width: "100%", marginTop: 8 }}
-                    />
-                  </label>
-                ) : (
-                  <div className="inline">
-                    <Badge>{draft.path}</Badge>
-                    <label className="inline">
-                      <input
-                        type="checkbox"
-                        checked={remove}
-                        onChange={(e) => {
-                          setRemove(e.target.checked);
-                          setCheck(null);
-                        }}
-                      />
-                      이 문서 삭제
-                    </label>
-                  </div>
-                )}
-                {!remove && (
-                  <label className="spaced-text" style={{ display: "block" }}>
-                    변경 후 본문
-                    <textarea
-                      aria-label="변경 후 본문"
-                      value={content}
-                      onChange={(e) => {
-                        setContent(e.target.value);
-                        setCheck(null);
-                      }}
-                      style={{ minHeight: 200, marginTop: 8 }}
-                    />
-                  </label>
-                )}
-                <Button
-                  disabled={!currentOperation()}
-                  onClick={() => {
-                    setOperations(combinedOperations());
-                    setDraft(null);
-                    setCheck(null);
-                  }}
-                >
-                  변경 목록에 추가
-                </Button>
+              }} placeholder='{"schemaVersion":1,"id":"...","projectId":"...","rationale":"...","operations":[],"guards":[]}' />
+            </Field>
+            <Actions><Button primary type="submit" disabled={busy || !jsonText.trim()}>원문·영향 검사</Button></Actions>
+          </> : <>
+            <p className="muted">수정할 문서를 불러오거나 새 문서를 추가하세요. 검토 후 실제 파일에 반영합니다.</p>
+            <div className="change-source">
+              <div className="change-document-controls">
+                <Field label="수정할 문서">
+                  <select value={path} disabled={busy} onChange={(event) => setPath(event.target.value)}>
+                    <option value="">문서 선택</option>
+                    {documents.map((document) => <option key={document.id} value={document.path}>
+                      {document.title || document.path} · {document.path}
+                    </option>)}
+                  </select>
+                </Field>
+                <Button disabled={busy || !path} onClick={() => void read()}>내용 불러오기</Button>
               </div>
-            )}
-            {operations.map((op) => (
-              <div className="list-row" key={op.path}>
-                <div>
-                  <strong>{op.path}</strong>
-                  <p>
-                    {op.content === null
-                      ? "문서 삭제"
-                      : op.expectedRevision === null
-                        ? "새 문서"
-                        : "본문 수정"}
-                  </p>
-                </div>
-                <Button
-                  quiet
-                  aria-label={`${op.path} 변경 제외`}
-                  onClick={() => {
-                    setOperations(operations.filter((x) => x.path !== op.path));
-                    setCheck(null);
-                  }}
-                >
-                  <X />
-                </Button>
-              </div>
-            ))}
-            <div className="inline spaced-text">
-              <Button
-                primary
-                disabled={
-                  busy || !rationale.trim() || !combinedOperations().length
-                }
-                onClick={() => void inspect()}
-              >
-                이전·이후와 영향 검토
-              </Button>
-              <span className="micro">
-                현재 작성 중인 문서도 함께 검사합니다.
-              </span>
+              <Button disabled={busy} onClick={() => {
+                setDraft({ path: "", revision: null, text: "" });
+                setContent("");
+                setRemove(false);
+                setCheck(null);
+              }}><Plus />새 문서</Button>
             </div>
-          </>
-        )}
+            {draft && <div className="form-stack change-draft">
+              {draft.revision === null ? <Field label="새 문서 경로">
+                <input placeholder="docs/architecture.md" value={draft.path} onChange={(event) => {
+                  setDraft({ ...draft, path: event.target.value });
+                  setCheck(null);
+                }} />
+              </Field> : <div className="change-draft-heading">
+                <strong>{draft.path}</strong>
+                <label className="change-delete"><input type="checkbox" checked={remove} onChange={(event) => {
+                  setRemove(event.target.checked);
+                  setCheck(null);
+                }} />이 문서 삭제</label>
+              </div>}
+              {!remove && <Field label="변경 후 본문">
+                <textarea className="change-body" value={content} onChange={(event) => {
+                  setContent(event.target.value);
+                  setCheck(null);
+                }} />
+              </Field>}
+              <div className="editor-actions"><Button disabled={busy || !currentOperation()} onClick={() => {
+                setOperations(combinedOperations());
+                setDraft(null);
+                setCheck(null);
+              }}>변경 목록에 추가</Button></div>
+            </div>}
+            {operations.length > 0 && <section aria-label="검토할 변경">
+              <h3>검토할 변경 · {operations.length}개</h3>
+              {operations.map((operation) => <div className="list-row" key={operation.path}>
+                <div><strong>{operation.path}</strong><p>{operation.content === null ? "문서 삭제" : operation.expectedRevision === null ? "새 문서" : "본문 수정"}</p></div>
+                <Button quiet aria-label={`${operation.path} 변경 제외`} disabled={busy} onClick={() => {
+                  setOperations(operations.filter((item) => item.path !== operation.path));
+                  setCheck(null);
+                }}><X /></Button>
+              </div>)}
+            </section>}
+            <Field label="정리 이유">
+              <input value={rationale} maxLength={1000} onChange={(event) => {
+                setRationale(event.target.value);
+                setCheck(null);
+              }} />
+            </Field>
+            <Actions>
+              <span className="action-help">{combinedOperations().length ? "현재 작성 중인 문서도 함께 검사합니다." : "문서를 불러오거나 새 문서를 추가하세요."}</span>
+              <Button primary type="submit" disabled={busy || !rationale.trim() || !combinedOperations().length}>이전·이후와 영향 검토</Button>
+            </Actions>
+          </>}
+        </form>
       </section>
       {check && (
         <section className="panel spaced">
@@ -374,13 +289,13 @@ export function ChangesPage() {
               </ul>
             </div>
           )}
+          <Actions>
           <Button
             primary
             disabled={
               busy ||
               check.changeState !== "ready" ||
-              reviewedProject !== projectId ||
-              !s.workspace.settings.stateDirectory
+              reviewedProject !== projectId
             }
             onClick={() =>
               void perform(async () => {
@@ -396,11 +311,7 @@ export function ChangesPage() {
           >
             이 프로젝트에 실제 반영
           </Button>
-          {!s.workspace.settings.stateDirectory && (
-            <p className="micro spaced-text">
-              먼저 기록·문서 백업 저장 위치를 선택해 주세요.
-            </p>
-          )}
+          </Actions>
         </section>
       )}
       {outcome && (
@@ -422,9 +333,9 @@ export function ChangesPage() {
       )}
       <section className="panel spaced">
         <div className="section-heading" style={{ marginTop: 0 }}>
-          <h3>반영 이력과 복구</h3>
+          <h2>반영 이력과 복구</h2>
           <Button
-            disabled={busy || !s.workspace.settings.stateDirectory}
+            disabled={busy}
             onClick={() => void loadHistory()}
           >
             이력 불러오기

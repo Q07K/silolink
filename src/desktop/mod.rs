@@ -1,5 +1,12 @@
 mod analysis;
-pub use analysis::analyze_records;
+pub mod discovery;
+mod export;
+pub mod planning;
+pub mod rules;
+pub use analysis::{analyze_records, human_requests, request_view, similarity};
+pub use discovery::{AnalysisRun, Discovery};
+pub use export::{project_report, write_report};
+pub use planning::Estimate;
 
 use crate::{
     error::{Error, Result},
@@ -27,6 +34,9 @@ pub struct Settings {
     pub background_enabled: bool,
     pub collection_interval_secs: u64,
     pub theme: String,
+    /// Runs model analysis after background collection; it uses the user's CLI quota.
+    pub auto_analysis: bool,
+    pub analysis_provider: String,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -39,6 +49,8 @@ impl Default for Settings {
             background_enabled: false,
             collection_interval_secs: 300,
             theme: "system".into(),
+            auto_analysis: false,
+            analysis_provider: "codex".into(),
         }
     }
 }
@@ -59,6 +71,12 @@ pub struct Note {
     pub body: String,
     pub evidence_ids: Vec<String>,
     pub created_at: String,
+    /// Learning progress the user sets: open, applying, done, or held.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    /// The discovery or chat this note came from.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub origin_id: Option<String>,
 }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -73,6 +91,16 @@ pub struct Source {
     pub version: String,
     pub verified: bool,
     pub recorded_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fetched: Option<FetchedReference>,
+}
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FetchedReference {
+    pub url: String,
+    pub title: String,
+    pub text: String,
+    pub fetched_at: String,
 }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -92,6 +120,10 @@ pub struct Task {
     pub due_at: Option<String>,
     pub created_at: String,
     pub spans: Vec<TimeSpan>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub origin_id: Option<String>,
+    #[serde(default)]
+    pub estimates: Vec<Estimate>,
 }
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -136,6 +168,8 @@ pub struct DesktopData {
     pub chats: Vec<Chat>,
     pub notices: Vec<Notice>,
     pub seen_discoveries: Vec<String>,
+    pub discoveries: Vec<Discovery>,
+    pub analysis_runs: Vec<AnalysisRun>,
 }
 impl Default for DesktopData {
     fn default() -> Self {
@@ -149,6 +183,8 @@ impl Default for DesktopData {
             chats: vec![],
             notices: vec![],
             seen_discoveries: vec![],
+            discoveries: vec![],
+            analysis_runs: vec![],
         }
     }
 }
@@ -310,6 +346,17 @@ impl Desktop {
         body: &str,
         evidence_ids: Vec<String>,
     ) -> Result<String> {
+        self.add_note_from(project_id, kind, title, body, evidence_ids, None)
+    }
+    pub fn add_note_from(
+        &mut self,
+        project_id: &str,
+        kind: &str,
+        title: &str,
+        body: &str,
+        evidence_ids: Vec<String>,
+        origin_id: Option<String>,
+    ) -> Result<String> {
         self.project(project_id)?;
         text(title, 240)?;
         text(body, 200_000)?;
@@ -330,9 +377,27 @@ impl Desktop {
             body: body.into(),
             evidence_ids,
             created_at: project::now(),
+            status: (kind == "learning").then(|| "open".into()),
+            origin_id: origin_id.clone(),
         });
+        if let Some(origin) = &origin_id {
+            link(&mut next, origin, &id);
+        }
         self.commit(next)?;
         Ok(id)
+    }
+    pub fn set_note_status(&mut self, id: &str, status: &str) -> Result<()> {
+        if !matches!(status, "open" | "applying" | "done" | "held") {
+            return Err(invalid("Choose a valid note status."));
+        }
+        let mut next = self.data.clone();
+        let note = next
+            .notes
+            .iter_mut()
+            .find(|n| n.id == id)
+            .ok_or_else(|| invalid("Note not found."))?;
+        note.status = Some(status.into());
+        self.commit(next)
     }
     pub fn add_source(&mut self, mut source: Source) -> Result<String> {
         self.project(&source.project_id)?;
@@ -348,6 +413,15 @@ impl Desktop {
         {
             return Err(invalid("Choose a source kind and an HTTPS reference."));
         }
+        if let Some(fetched) = &source.fetched {
+            text(&fetched.text, 100_000)?;
+            if fetched.url != source.url
+                || fetched.title.len() > 1000
+                || chrono::DateTime::parse_from_rfc3339(&fetched.fetched_at).is_err()
+            {
+                return Err(invalid("The fetched reference does not match this source."));
+            }
+        }
         source.id = Uuid::new_v4().to_string();
         source.recorded_at = project::now();
         let id = source.id.clone();
@@ -356,7 +430,55 @@ impl Desktop {
         self.commit(next)?;
         Ok(id)
     }
+    pub fn export_notes(&self, project_id: &str, note_ids: &[String]) -> Result<String> {
+        let project = self.project(project_id)?;
+        if note_ids.is_empty() || note_ids.len() > 100 {
+            return Err(invalid("Choose between 1 and 100 notes to export."));
+        }
+        let mut output = format!(
+            "# SiloLink · {}\n\n",
+            project.metadata["name"].as_str().unwrap_or("프로젝트")
+        );
+        let mut seen = std::collections::BTreeSet::new();
+        for id in note_ids {
+            if !seen.insert(id) {
+                continue;
+            }
+            let note = self
+                .data
+                .notes
+                .iter()
+                .find(|note| &note.id == id && note.project_id == project_id)
+                .ok_or_else(|| {
+                    invalid("A selected note is missing or belongs to another project.")
+                })?;
+            output.push_str(&format!(
+                "## {}\n\n{} · {}\n\n{}\n\n",
+                note.title.replace(['\r', '\n'], " "),
+                note.kind,
+                note.created_at,
+                note.body
+            ));
+            if !note.evidence_ids.is_empty() {
+                output.push_str("### 연결된 원문 기록\n\n");
+                for evidence in &note.evidence_ids {
+                    output.push_str(&format!("- 원문 ID `{evidence}`\n"));
+                }
+                output.push('\n');
+            }
+        }
+        Ok(output)
+    }
     pub fn add_task(&mut self, project_id: &str, title: &str, phase: &str) -> Result<String> {
+        self.add_task_from(project_id, title, phase, None)
+    }
+    pub fn add_task_from(
+        &mut self,
+        project_id: &str,
+        title: &str,
+        phase: &str,
+        origin_id: Option<String>,
+    ) -> Result<String> {
         self.project(project_id)?;
         text(title, 240)?;
         text(phase, 80)?;
@@ -372,9 +494,178 @@ impl Desktop {
             due_at: None,
             created_at: project::now(),
             spans: vec![],
+            origin_id: origin_id.clone(),
+            estimates: vec![],
         });
+        if let Some(origin) = &origin_id {
+            link(&mut next, origin, &id);
+        }
         self.commit(next)?;
         Ok(id)
+    }
+    /// Records a new estimate only when it differs, so the history shows why it changed.
+    pub fn estimate_task(&mut self, id: &str) -> Result<Value> {
+        let task = self
+            .data
+            .tasks
+            .iter()
+            .find(|t| t.id == id)
+            .ok_or_else(|| invalid("Task not found."))?
+            .clone();
+        let now = chrono::Utc::now().timestamp_millis();
+        let references = planning::similar(&self.data.tasks, &task, now);
+        let estimate = planning::estimate(&self.data.tasks, &task, now, &project::now());
+        let changed = task.estimates.last().is_none_or(|last| {
+            (last.low_minutes, last.median_minutes, last.high_minutes, &last.basis_task_ids)
+                != (estimate.low_minutes, estimate.median_minutes, estimate.high_minutes, &estimate.basis_task_ids)
+        });
+        if changed {
+            let mut next = self.data.clone();
+            let stored = next.tasks.iter_mut().find(|t| t.id == id).expect("task exists");
+            stored.estimates.push(estimate.clone());
+            if stored.estimates.len() > 20 {
+                stored.estimates.remove(0);
+            }
+            self.commit(next)?;
+        }
+        Ok(serde_json::json!({"estimate":estimate,"references":references,"changed":changed}))
+    }
+    /// Merges discoveries by fingerprint, keeping the user's review; returns newly added IDs.
+    pub fn merge_discoveries(&mut self, incoming: Vec<Discovery>) -> Result<Vec<String>> {
+        let mut next = self.data.clone();
+        let mut added = vec![];
+        let mut changed = false;
+        for discovery in incoming {
+            match next
+                .discoveries
+                .iter_mut()
+                .find(|d| d.fingerprint == discovery.fingerprint)
+            {
+                Some(existing) => {
+                    let known: std::collections::BTreeSet<_> =
+                        existing.evidence.iter().map(|e| e.record_id.clone()).collect();
+                    let grew = discovery.evidence.iter().any(|e| !known.contains(&e.record_id));
+                    if grew || existing.summary != discovery.summary {
+                        existing.evidence = discovery.evidence;
+                        existing.project_ids = discovery.project_ids;
+                        existing.title = discovery.title;
+                        existing.summary = discovery.summary;
+                        existing.updated_at = discovery.updated_at;
+                        changed = true;
+                    }
+                }
+                None => {
+                    added.push(discovery.id.clone());
+                    next.discoveries.push(discovery);
+                    changed = true;
+                }
+            }
+        }
+        // Bound storage: drop the oldest dismissed items first.
+        while next.discoveries.len() > 500 {
+            let index = next
+                .discoveries
+                .iter()
+                .position(|d| d.status == "dismissed")
+                .unwrap_or(0);
+            next.discoveries.remove(index);
+        }
+        if changed {
+            self.commit(next)?;
+        }
+        Ok(added)
+    }
+    /// Replaces app-computed discoveries: unreviewed ones whose basis disappeared are retired.
+    pub fn sync_local_discoveries(&mut self, found: Vec<Discovery>) -> Result<Vec<String>> {
+        let current: std::collections::BTreeSet<String> =
+            found.iter().map(|d| d.fingerprint.clone()).collect();
+        let stale = self
+            .data
+            .discoveries
+            .iter()
+            .any(|d| d.source == "local" && d.status == "new" && !current.contains(&d.fingerprint));
+        if stale {
+            let mut next = self.data.clone();
+            next.discoveries
+                .retain(|d| !(d.source == "local" && d.status == "new" && !current.contains(&d.fingerprint)));
+            self.commit(next)?;
+        }
+        self.merge_discoveries(found)
+    }
+    pub fn review_discovery(&mut self, id: &str, status: &str, correction: Option<&str>) -> Result<()> {
+        if !discovery::STATUSES.contains(&status)
+            || correction.is_some_and(|c| c.len() > 4000)
+            || (status == "corrected" && correction.is_none_or(|c| c.trim().is_empty()))
+        {
+            return Err(invalid("Choose a review status; a correction needs text."));
+        }
+        let mut next = self.data.clone();
+        let item = next
+            .discoveries
+            .iter_mut()
+            .find(|d| d.id == id)
+            .ok_or_else(|| invalid("Discovery not found."))?;
+        item.status = status.into();
+        item.correction = correction.map(|c| c.trim().to_owned()).filter(|c| !c.is_empty());
+        item.updated_at = project::now();
+        self.commit(next)
+    }
+    pub fn begin_analysis(&mut self, provider: &str, project_ids: &[String], request_count: usize) -> Result<String> {
+        if !matches!(provider, "codex" | "claude") || project_ids.is_empty() || project_ids.len() > 10 {
+            return Err(invalid("Choose a supported provider and 1-10 projects."));
+        }
+        if self.data.analysis_runs.iter().any(|r| r.status == "running") {
+            return Err(Error::new("ANALYSIS_RUNNING", "An analysis is already running."));
+        }
+        let id = Uuid::new_v4().to_string();
+        let mut next = self.data.clone();
+        next.analysis_runs.push(AnalysisRun {
+            id: id.clone(),
+            provider: provider.into(),
+            project_ids: project_ids.to_vec(),
+            status: "running".into(),
+            started_at: project::now(),
+            ended_at: None,
+            request_count,
+            discovery_count: 0,
+            rejected_count: 0,
+            error: None,
+        });
+        if next.analysis_runs.len() > 50 {
+            next.analysis_runs.remove(0);
+        }
+        self.commit(next)?;
+        Ok(id)
+    }
+    pub fn finish_analysis(
+        &mut self,
+        id: &str,
+        outcome: std::result::Result<(Vec<Discovery>, usize), Error>,
+    ) -> Result<Vec<String>> {
+        let (status, error, found, rejected) = match outcome {
+            Ok((found, rejected)) => ("completed", None, found, rejected),
+            Err(e) => (
+                if e.code == "AI_CANCELLED" { "cancelled" } else { "failed" },
+                Some(e.json()),
+                vec![],
+                0,
+            ),
+        };
+        let count = found.len();
+        let added = self.merge_discoveries(found)?;
+        let mut next = self.data.clone();
+        let run = next
+            .analysis_runs
+            .iter_mut()
+            .find(|r| r.id == id)
+            .ok_or_else(|| invalid("Analysis run not found."))?;
+        run.status = status.into();
+        run.ended_at = Some(project::now());
+        run.discovery_count = count;
+        run.rejected_count = rejected;
+        run.error = error;
+        self.commit(next)?;
+        Ok(added)
     }
     pub fn complete_task(&mut self, id: &str, completed: bool, user_tested: bool) -> Result<()> {
         let mut next = self.data.clone();
@@ -531,12 +822,23 @@ impl Desktop {
         serde_json::to_value(&self.data).expect("desktop JSON")
     }
 }
+fn link(data: &mut DesktopData, origin: &str, item: &str) {
+    if let Some(discovery) = data.discoveries.iter_mut().find(|d| d.id == origin)
+        && !discovery.follow_ups.iter().any(|f| f == item)
+    {
+        discovery.follow_ups.push(item.into());
+        if discovery.status == "new" {
+            discovery.status = "accepted".into();
+        }
+    }
+}
 fn validate_settings(settings: &Settings) -> Result<()> {
     if settings.review_time.len() != 5
         || chrono::NaiveTime::parse_from_str(&settings.review_time, "%H:%M").is_err()
         || settings.review_weekday > 6
         || !matches!(settings.timezone.as_str(), "Asia/Seoul" | "UTC")
         || !matches!(settings.theme.as_str(), "system" | "light" | "dark")
+        || !matches!(settings.analysis_provider.as_str(), "codex" | "claude")
         || !(30..=86400).contains(&settings.collection_interval_secs)
         || settings
             .state_directory

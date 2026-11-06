@@ -1,5 +1,6 @@
 import type { Snapshot } from "./types";
 export const emptySnapshot: Snapshot = {
+  defaultStateDirectory: "C:\\AppData\\Local\\io.silolink.desktop\\Data",
   workspace: {
     schemaVersion: 1,
     settings: {

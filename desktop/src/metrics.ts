@@ -47,6 +47,17 @@ export function recordsInPeriod(
     return key >= from && key <= today;
   });
 }
+export function inPeriod(
+  date: string | null | undefined,
+  timezone: string,
+  period: "daily" | "weekly",
+  now = new Date(),
+): boolean {
+  if (!date || !Number.isFinite(Date.parse(date))) return false;
+  const key = dateKey(new Date(date), timezone);
+  const from = dateKey(new Date(now.getTime() - (period === "weekly" ? 6 : 0) * 86_400_000), timezone);
+  return key >= from && key <= dateKey(now, timezone);
+}
 export function taskMilliseconds(task: Task, now = Date.now()): number {
   return durationUnion(
     task.spans.map((s) => [

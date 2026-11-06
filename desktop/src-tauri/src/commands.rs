@@ -56,7 +56,7 @@ pub async fn choose_directory(app: AppHandle) -> Reply {
 }
 #[tauri::command]
 pub async fn collect_records(state: State<'_, Arc<Runtime>>, project_id: String) -> Reply {
-    public(runtime::collect(state.inner().clone(), project_id).await)
+    public(runtime::collect(state.inner(), &project_id, false).await)
 }
 #[tauri::command]
 pub async fn read_document(
@@ -69,6 +69,65 @@ pub async fn read_document(
     worker(move || {
         let project = lock(&runtime.repository)?.project(&project_id)?;
         silolink::documents::read(&project, &path, revision.as_deref())
+    })
+    .await
+}
+#[tauri::command]
+pub async fn search_documents(
+    state: State<'_, Arc<Runtime>>,
+    project_id: String,
+    query: String,
+) -> Reply {
+    let runtime = state.inner().clone();
+    worker(move || {
+        let project = lock(&runtime.repository)?.project(&project_id)?;
+        lock(&runtime.search)?.search(&project, &query)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn preview_notes(
+    state: State<'_, Arc<Runtime>>,
+    project_id: String,
+    note_ids: Vec<String>,
+) -> Reply {
+    let runtime = state.inner().clone();
+    worker(move || {
+        Ok(json!({"markdown":lock(&runtime.repository)?.export_notes(&project_id, &note_ids)?}))
+    })
+    .await
+}
+#[tauri::command]
+pub async fn fetch_reference(url: String) -> Reply {
+    public(crate::reference::fetch(&url).await.and_then(|reference| {
+        serde_json::to_value(reference)
+            .map_err(|_| error("REFERENCE_FETCH_FAILED", "Cannot encode the reference."))
+    }))
+}
+#[tauri::command]
+pub async fn export_notes(
+    app: AppHandle,
+    state: State<'_, Arc<Runtime>>,
+    project_id: String,
+    note_ids: Vec<String>,
+) -> Reply {
+    let runtime = state.inner().clone();
+    worker(move || {
+        let markdown = lock(&runtime.repository)?.export_notes(&project_id, &note_ids)?;
+        let Some(destination) = app
+            .dialog()
+            .file()
+            .add_filter("Markdown", &["md"])
+            .set_file_name("silolink-report.md")
+            .blocking_save_file()
+        else {
+            return Ok(Value::Null);
+        };
+        let path = destination
+            .into_path()
+            .map_err(|_| error("EXPORT_FAILED", "Choose a local Markdown file."))?;
+        silolink::desktop::write_report(&path, &markdown)?;
+        Ok(json!({"path":path}))
     })
     .await
 }
@@ -124,7 +183,11 @@ pub async fn change_history(state: State<'_, Arc<Runtime>>, project_id: String) 
     let runtime = state.inner().clone();
     worker(move || {
         let repo = lock(&runtime.repository)?;
-        silolink::changes::list(&repo.project(&project_id)?, &repo.state_directory()?, None)
+        silolink::changes::list(
+            &repo.project(&project_id)?,
+            runtime.state_directory(&repo.data.settings),
+            None,
+        )
     })
     .await
 }
@@ -139,7 +202,10 @@ pub async fn undo_change(
     worker(move || {
         let (p, dir) = {
             let repo = lock(&runtime.repository)?;
-            (repo.project(&project_id)?, repo.state_directory()?)
+            (
+                repo.project(&project_id)?,
+                runtime.state_directory(&repo.data.settings).to_owned(),
+            )
         };
         silolink::changes::undo_with_progress(&p, &dir, &change_id, |stage, path| {
             let _ = app.emit("document-progress", json!({"stage":stage,"path":path}));
@@ -194,4 +260,69 @@ pub fn open_reference(app: AppHandle, url: String) -> Reply {
             })?;
         Ok(Value::Null)
     })())
+}
+#[tauri::command]
+pub async fn run_analysis(
+    app: AppHandle,
+    state: State<'_, Arc<Runtime>>,
+    provider: String,
+    project_ids: Vec<String>,
+) -> Reply {
+    let runtime = state.inner().clone();
+    worker(move || {
+        crate::insight::start_analysis(app, runtime, provider, project_ids).map(|id| json!({"id":id}))
+    })
+    .await
+}
+#[tauri::command]
+pub async fn compare_rules(state: State<'_, Arc<Runtime>>, project_ids: Vec<String>) -> Reply {
+    let runtime = state.inner().clone();
+    worker(move || crate::insight::compare_rules(&runtime, &project_ids)).await
+}
+#[tauri::command]
+pub async fn rule_plan(
+    state: State<'_, Arc<Runtime>>,
+    project_id: String,
+    path: String,
+    heading: String,
+    rules: Vec<String>,
+) -> Reply {
+    let runtime = state.inner().clone();
+    worker(move || crate::insight::rule_plan(&runtime, &project_id, &path, &heading, &rules)).await
+}
+#[tauri::command]
+pub async fn estimate_task(state: State<'_, Arc<Runtime>>, id: String) -> Reply {
+    let runtime = state.inner().clone();
+    worker(move || lock(&runtime.repository)?.estimate_task(&id)).await
+}
+#[tauri::command]
+pub async fn preview_project_report(state: State<'_, Arc<Runtime>>, project_id: String) -> Reply {
+    let runtime = state.inner().clone();
+    worker(move || Ok(json!({"markdown":crate::insight::report(&runtime, &project_id)?}))).await
+}
+#[tauri::command]
+pub async fn export_project_report(
+    app: AppHandle,
+    state: State<'_, Arc<Runtime>>,
+    project_id: String,
+) -> Reply {
+    let runtime = state.inner().clone();
+    worker(move || {
+        let markdown = crate::insight::report(&runtime, &project_id)?;
+        let Some(destination) = app
+            .dialog()
+            .file()
+            .add_filter("Markdown", &["md"])
+            .set_file_name("silolink-project-report.md")
+            .blocking_save_file()
+        else {
+            return Ok(Value::Null);
+        };
+        let path = destination
+            .into_path()
+            .map_err(|_| error("EXPORT_FAILED", "Choose a local Markdown file."))?;
+        silolink::desktop::write_report(&path, &markdown)?;
+        Ok(json!({"path":path}))
+    })
+    .await
 }

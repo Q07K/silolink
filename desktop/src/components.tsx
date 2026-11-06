@@ -1,5 +1,5 @@
-import { ArrowRight, FolderPlus, MessageCircle, Sparkles } from "lucide-react";
-import type { ReactNode, ButtonHTMLAttributes } from "react";
+import { ChevronDown, ChevronRight, FolderPlus, Inbox, MessageCircle } from "lucide-react";
+import type { ReactNode, ComponentPropsWithRef, Ref } from "react";
 import { useEffect, useId, useRef } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -12,7 +12,7 @@ export function Button({
   primary,
   quiet,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
+}: ComponentPropsWithRef<"button"> & {
   primary?: boolean;
   quiet?: boolean;
 }) {
@@ -29,11 +29,14 @@ export function Button({
 export function Badge({
   children,
   accent,
+  tone,
 }: {
   children: ReactNode;
   accent?: boolean;
+  tone?: "success";
 }) {
-  return <span className={accent ? "badge accent" : "badge"}>{children}</span>;
+  const variant = tone ?? (accent ? "accent" : "");
+  return <span className={variant ? `badge ${variant}` : "badge"}>{children}</span>;
 }
 export function Heading({
   title,
@@ -54,20 +57,83 @@ export function Heading({
     </header>
   );
 }
-export function Tabs({ items }: { items: [string, string][] }) {
-  const { tab, setTab } = useWorkspace();
+export function Actions({ children }: { children: ReactNode }) {
+  return <div className="form-actions">{children}</div>;
+}
+export function Field({ label, children }: { label: string; children: ReactNode }) {
+  return <label className="form-field"><span>{label}</span>{children}</label>;
+}
+
+export function DisclosureRow({ title, meta, status, expanded, onToggle, buttonRef, children }: {
+  title: string;
+  meta: string;
+  status?: ReactNode;
+  expanded: boolean;
+  onToggle: () => void;
+  buttonRef?: Ref<HTMLButtonElement>;
+  children: ReactNode;
+}) {
+  const detailId = useId();
+
   return (
-    <nav className="tabs" aria-label="화면 보기">
+    <article className="note-list-item">
+      <button className="note-row" type="button" ref={buttonRef}
+        aria-expanded={expanded} aria-controls={detailId} onClick={onToggle}>
+        <span><strong>{title}</strong><small>{meta}</small></span>
+        <span className="note-row-indicators">
+          {status}
+          {expanded ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}
+        </span>
+      </button>
+      <div className="note-detail" id={detailId} hidden={!expanded}>{expanded && children}</div>
+    </article>
+  );
+}
+type TabsProps = {
+  items: [string, string][];
+  children: ReactNode;
+  label?: string;
+  value?: string;
+  onChange?: (value: string) => void;
+};
+export function Tabs({ value, onChange, ...props }: TabsProps) {
+  const { tab, setTab } = useWorkspace();
+  return <TabSet {...props} value={value ?? tab} onChange={onChange ?? setTab} />;
+}
+export function TabSet({ items, children, label = "화면 보기", value, onChange: change }: TabsProps & {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const prefix = useId();
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  const selected = items.some(([id]) => id === value) ? value : items[0][0];
+  return (
+    <>
+    <div className="tabs" role="tablist" aria-label={label}>
       {items.map(([id, label], i) => (
-        <Button
-          key={id}
-          aria-pressed={tab === id || (!tab && i === 0)}
-          onClick={() => setTab(id)}
+        <button type="button" role="tab" key={id} id={`${prefix}-tab-${id}`}
+          ref={(element) => { buttons.current[i] = element; }}
+          aria-selected={selected === id} aria-controls={`${prefix}-panel`}
+          tabIndex={selected === id ? 0 : -1}
+          onClick={() => change(id)}
+          onFocus={() => change(id)}
+          onKeyDown={(event) => {
+            const next = event.key === "ArrowRight" ? (i + 1) % items.length
+              : event.key === "ArrowLeft" ? (i - 1 + items.length) % items.length
+              : event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : null;
+            if (next === null) return;
+            event.preventDefault();
+            change(items[next][0]);
+            buttons.current[next]?.focus();
+            buttons.current[next]?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+          }}
         >
           {label}
-        </Button>
+        </button>
       ))}
-    </nav>
+    </div>
+    <div role="tabpanel" id={`${prefix}-panel`} aria-labelledby={`${prefix}-tab-${selected}`} tabIndex={0}>{children}</div>
+    </>
   );
 }
 export function Empty({
@@ -82,11 +148,11 @@ export function Empty({
   return (
     <section className="empty">
       <div className="empty-symbol">
-        <Sparkles size={24} />
+        <Inbox size={24} aria-hidden="true" />
       </div>
       <h2>{title}</h2>
       <p>{children}</p>
-      {action}
+      {action && <Actions>{action}</Actions>}
     </section>
   );
 }
@@ -111,18 +177,19 @@ export function PromptButton({
   question,
   mode = "chat",
   ids,
+  documents,
 }: {
   text?: string;
   question: string;
   mode?: string;
   ids?: string[];
+  documents?: import("./types").DocumentReference[];
 }) {
   const { ask } = useWorkspace();
   return (
-    <Button quiet onClick={() => ask(question, mode, ids)}>
-      <MessageCircle />
+    <Button quiet onClick={() => ask(question, mode, ids, { documents })}>
+      <MessageCircle aria-hidden="true" />
       {text}
-      <ArrowRight />
     </Button>
   );
 }

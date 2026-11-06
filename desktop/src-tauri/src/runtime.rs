@@ -10,7 +10,7 @@ use std::{
     fs::{self, OpenOptions},
     io::Write,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex, MutexGuard},
+    sync::{Mutex, MutexGuard},
 };
 use tauri::{AppHandle, Emitter};
 use tokio::sync::watch;
@@ -18,10 +18,13 @@ use tokio::sync::watch;
 pub struct Runtime {
     pub repository: Mutex<Desktop>,
     pub directory: PathBuf,
+    default_state_directory: PathBuf,
+    pub collection_settings_changed: watch::Sender<()>,
     pub jobs: Mutex<HashMap<String, watch::Sender<bool>>>,
     reviewed: Mutex<HashMap<String, (String, PathBuf)>>,
     registry: PathBuf,
     connection_errors: Mutex<Vec<Value>>,
+    pub search: Mutex<silolink::documents::SearchIndex>,
 }
 pub fn error(code: &'static str, message: &str) -> Error {
     Error::new(code, message)
@@ -35,7 +38,7 @@ pub fn lock<T>(value: &Mutex<T>) -> Result<MutexGuard<'_, T>> {
     })
 }
 impl Runtime {
-    pub fn open(directory: &Path) -> Result<Self> {
+    pub fn open(directory: &Path, default_state_directory: PathBuf) -> Result<Self> {
         let mut repository = Desktop::open(directory)?;
         // An interrupted provider process must not stay 'running' after a restart.
         let mut next = repository.data.clone();
@@ -47,17 +50,34 @@ impl Runtime {
                 changed = true;
             }
         }
+        for run in &mut next.analysis_runs {
+            if run.status == "running" {
+                run.status = "interrupted".into();
+                run.ended_at = Some(project::now());
+                changed = true;
+            }
+        }
         if changed {
             repository.commit(next)?;
         }
         Ok(Self {
             repository: Mutex::new(repository),
             directory: directory.into(),
+            default_state_directory,
+            collection_settings_changed: watch::channel(()).0,
             jobs: Mutex::new(HashMap::new()),
             reviewed: Mutex::new(HashMap::new()),
             registry: silolink::registry::directory()?,
             connection_errors: Mutex::new(Vec::new()),
+            search: Mutex::new(silolink::documents::SearchIndex::default()),
         })
+    }
+    pub fn state_directory<'a>(&'a self, settings: &'a Settings) -> &'a Path {
+        settings
+            .state_directory
+            .as_deref()
+            .map(Path::new)
+            .unwrap_or(&self.default_state_directory)
     }
     pub fn snapshot(&self) -> Result<Value> {
         self.sync_projects()?;
@@ -66,6 +86,7 @@ impl Runtime {
         let mut inventories = vec![];
         let mut collections = vec![];
         let mut records = vec![];
+        let directory = self.state_directory(&data.settings);
         for linked in &data.projects {
             let project = match project::read(&linked.root) {
                 Ok(p) if p.id() == linked.id => p,
@@ -82,22 +103,29 @@ impl Runtime {
                 Ok(report) => inventories.push(json!({"projectId":linked.id,"report":report})),
                 Err(e) => inventories.push(json!({"projectId":linked.id,"error":e.json()})),
             };
-            if let Some(directory) = &data.settings.state_directory {
-                match silolink::sync::read(&project, Path::new(directory), "all") {
-                    Ok(report) => {
-                        if let Some(items) = report["records"].as_array() {
-                            records.extend(items.clone());
-                        }
-                        collections
-                            .push(json!({"projectId":linked.id,"lastRun":report["lastRun"]}));
+            match silolink::sync::read(&project, directory, "all") {
+                Ok(report) => {
+                    if let Some(items) = report["records"].as_array() {
+                        records.extend(items.clone());
                     }
-                    Err(e) => collections.push(json!({"projectId":linked.id,"error":e.json()})),
+                    collections.push(json!({"projectId":linked.id,"lastRun":report["lastRun"]}));
                 }
+                Err(e) if e.code == "STORE_NOT_INITIALIZED" => (),
+                Err(e) => collections.push(json!({"projectId":linked.id,"error":e.json()})),
             }
         }
         let analysis = analyze_records(&records);
+        // Deterministic discoveries are refreshed with every read; reviews are preserved.
+        let added = crate::insight::refresh_local(self, &records, &analysis)?;
+        if !added.is_empty() {
+            let mut repo = lock(&self.repository)?;
+            for (_, fingerprint, title) in &added {
+                repo.record_notice(&format!("discovery:{fingerprint}"), "discovery", &format!("새 발견: {title}"))?;
+            }
+        }
+        let data = lock(&self.repository)?.data.clone();
         Ok(
-            json!({"workspace":data,"inventories":inventories,"collections":collections,"records":records,"analysis":analysis,"projectConnectionErrors":connection_errors,"loadedAt":project::now()}),
+            json!({"workspace":data,"defaultStateDirectory":self.default_state_directory,"inventories":inventories,"collections":collections,"records":records,"analysis":analysis,"projectConnectionErrors":connection_errors,"loadedAt":project::now()}),
         )
     }
     pub fn sync_projects(&self) -> Result<bool> {
@@ -165,7 +193,10 @@ impl Runtime {
     pub fn apply(&self, app: &AppHandle, project_id: &str, plan_id: &str) -> Result<Value> {
         let (project, state) = {
             let repo = lock(&self.repository)?;
-            (repo.project(project_id)?, repo.state_directory()?)
+            (
+                repo.project(project_id)?,
+                self.state_directory(&repo.data.settings).to_owned(),
+            )
         };
         let (scope, path) = lock(&self.reviewed)?.get(plan_id).cloned().ok_or_else(|| {
             error(
@@ -216,6 +247,18 @@ pub enum Mutation {
         title: String,
         body: String,
         evidence_ids: Vec<String>,
+        #[serde(default)]
+        origin_id: Option<String>,
+    },
+    NoteStatus {
+        id: String,
+        status: String,
+    },
+    ReviewDiscovery {
+        id: String,
+        status: String,
+        #[serde(default)]
+        correction: Option<String>,
     },
     Source {
         source: Source,
@@ -224,6 +267,8 @@ pub enum Mutation {
         project_id: String,
         title: String,
         phase: String,
+        #[serde(default)]
+        origin_id: Option<String>,
     },
     UpdateTask {
         id: String,
@@ -245,7 +290,13 @@ pub fn mutate(runtime: &Runtime, request: Mutation) -> Result<Value> {
     let id = match request {
         Mutation::Connect { path, initialize } => Some(repo.connect(Path::new(&path), initialize)?),
         Mutation::Settings { settings } => {
+            let previous = &repo.data.settings;
+            let collection_changed = settings.background_enabled != previous.background_enabled
+                || runtime.state_directory(&settings) != runtime.state_directory(previous);
             repo.save_settings(settings)?;
+            if collection_changed {
+                runtime.collection_settings_changed.send_replace(());
+            }
             None
         }
         Mutation::Note {
@@ -254,13 +305,27 @@ pub fn mutate(runtime: &Runtime, request: Mutation) -> Result<Value> {
             title,
             body,
             evidence_ids,
-        } => Some(repo.add_note(&project_id, &kind, &title, &body, evidence_ids)?),
+            origin_id,
+        } => Some(repo.add_note_from(&project_id, &kind, &title, &body, evidence_ids, origin_id)?),
+        Mutation::NoteStatus { id, status } => {
+            repo.set_note_status(&id, &status)?;
+            None
+        }
+        Mutation::ReviewDiscovery {
+            id,
+            status,
+            correction,
+        } => {
+            repo.review_discovery(&id, &status, correction.as_deref())?;
+            None
+        }
         Mutation::Source { source } => Some(repo.add_source(source)?),
         Mutation::AddTask {
             project_id,
             title,
             phase,
-        } => Some(repo.add_task(&project_id, &title, &phase)?),
+            origin_id,
+        } => Some(repo.add_task_from(&project_id, &title, &phase, origin_id)?),
         Mutation::UpdateTask {
             id,
             completed,
@@ -284,10 +349,19 @@ pub fn mutate(runtime: &Runtime, request: Mutation) -> Result<Value> {
     };
     Ok(json!({"id":id}))
 }
-pub async fn collect(runtime: Arc<Runtime>, project_id: String) -> Result<Value> {
+pub async fn collect(runtime: &Runtime, project_id: &str, background: bool) -> Result<Value> {
     let (project, state) = {
         let repo = lock(&runtime.repository)?;
-        (repo.project(&project_id)?, repo.state_directory()?)
+        if background && !repo.data.settings.background_enabled {
+            return Err(error(
+                "COLLECTION_DISABLED",
+                "Background collection is off.",
+            ));
+        }
+        (
+            repo.project(project_id)?,
+            runtime.state_directory(&repo.data.settings).to_owned(),
+        )
     };
     silolink::sync::collect(&project, &state, "all", 1000).await
 }

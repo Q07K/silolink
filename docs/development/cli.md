@@ -214,7 +214,7 @@ silolink records --project "C:\path\to\project" --state-dir "C:\path\to\silolink
 silolink watch --project "C:\path\to\project" --state-dir "C:\path\to\silolink-state" --interval 30
 ```
 
-세 명령은 `--state-dir` 또는 `SILOLINK_STATE_DIR`로 위치를 명시해야 한다. 대화가 저장되므로 Git 경로 밖의 전용 폴더를 권장한다. 위치 미지정은 공급자 실행·저장 전에 오류다. 제품 기본 저장 위치·여러 PC 동기화는 아직 미정이다.
+세 CLI 명령은 `--state-dir` 또는 `SILOLINK_STATE_DIR`로 위치를 명시해야 한다. 대화가 저장되므로 Git 경로 밖의 전용 폴더를 권장한다. 위치 미지정은 공급자 실행·저장 전에 오류다. 데스크톱 기본 위치는 [데스크톱 안내](desktop.md)를 참고한다. 여러 PC 동기화 정책은 아직 미정이다.
 
 - `sync`는 지원 이력을 다시 읽어 추가·수정·동일 기록을 구분한다. 기본 상한은 `Number.MAX_SAFE_INTEGER`와 같은 9,007,199,254,740,991개로 유지했다. `--limit`를 줄이면 부분 범위를 표시한다. stdout에는 원문 대신 변경 건수·진단·저장 경로를 출력한다.
 - `records`는 공급자를 실행하지 않고 현재 저장본과 `lastRun`을 읽는다. `status: success`는 저장본 조회 성공이며 수집 성공·최신성은 `lastRun`에서 판단한다.

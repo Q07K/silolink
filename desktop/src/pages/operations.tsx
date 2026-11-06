@@ -1,26 +1,38 @@
 import { useEffect, useState } from "react";
 import {
+  Check,
+  ClipboardCheck,
+  ClipboardX,
   ExternalLink,
   Play,
   Plus,
   Square,
   ArrowUp,
   LoaderCircle,
+  RotateCcw,
+  Save,
 } from "lucide-react";
-import { mutate, native } from "../api";
+import { errorMessage, mutate, native } from "../api";
+import { titleFromQuestion } from "../titles";
+import { NoteExport } from "../note-export";
 import { useWorkspace } from "../context";
 import { ToolConnections } from "../tool-connections";
+import { getSettingsSection } from "../settings-sections";
 import {
   Badge,
+  Actions,
   Button,
+  DisclosureRow,
   Empty,
+  Field,
   Heading,
   MarkdownContent,
   NoProject,
   Tabs,
 } from "../components";
 import { duration, durationUnion, taskMilliseconds, when } from "../metrics";
-import type { Settings, Source } from "../types";
+import type { EstimateResult, Settings, Source, Task } from "../types";
+import { useEditorFocus } from "../use-editor-focus";
 
 const sourceKinds: { [kind: string]: string } = {
   official: "공식",
@@ -29,7 +41,10 @@ const sourceKinds: { [kind: string]: string } = {
   interpretation: "AI 해석",
 };
 export function ResearchPage() {
-  const { snapshot: s, projectId, perform, busy, ask } = useWorkspace();
+  const { snapshot: s, projectId, perform, busy, ask, tab, setTab } = useWorkspace();
+  const [selectedSource, setSelectedSource] = useState("");
+  const [selectedNote, setSelectedNote] = useState("");
+  const view = tab === "notes" ? "notes" : "sources";
   const [editing, setEditing] = useState(false),
     [title, setTitle] = useState(""),
     [url, setUrl] = useState(""),
@@ -38,9 +53,18 @@ export function ResearchPage() {
     [conditions, setConditions] = useState(""),
     [version, setVersion] = useState(""),
     [verified, setVerified] = useState(false);
+  const [fetched, setFetched] = useState<Source["fetched"]>(null);
+  const { addButton, savedRow, focusAfterClose } = useEditorFocus(editing);
+  useEffect(() => {
+    setEditing(false);
+    setSelectedSource(""); setSelectedNote("");
+    setFetched(null);
+    setTitle(""); setUrl(""); setClaim(""); setConditions(""); setVersion(""); setVerified(false);
+  }, [projectId]);
   if (!projectId) return <NoProject />;
   const sources = s.workspace.sources.filter((r) => r.projectId === projectId);
-  function save() {
+  async function save() {
+    let savedId = "";
     const source: Source = {
       id: "",
       projectId,
@@ -52,55 +76,60 @@ export function ResearchPage() {
       version,
       verified,
       recordedAt: "",
+      fetched,
     };
-    void perform(
-      () => mutate({ operation: "source", source }),
+    const ok = await perform(
+      async () => { savedId = (await mutate({ operation: "source", source })).id ?? ""; },
       "출처와 확인 상태를 저장했습니다.",
-    ).then((ok) => {
-      if (ok) {
-        setEditing(false);
-        setTitle("");
-        setUrl("");
-        setClaim("");
-        setConditions("");
-        setVersion("");
-        setVerified(false);
-      }
-    });
+    );
+    if (ok) {
+      focusAfterClose.current = "saved";
+      setSelectedSource(savedId);
+      setEditing(false);
+      setTitle("");
+      setUrl("");
+      setClaim("");
+      setConditions("");
+      setVersion("");
+      setVerified(false);
+      setFetched(null);
+    }
   }
+  const addAction = (
+    <Button primary ref={addButton} disabled={busy} onClick={() => { setTab("sources"); setEditing(true); }}>
+      <Plus />자료 추가
+    </Button>
+  );
   return (
     <>
       <Heading
-        title="판단에 필요한 조사"
-        sub="공식·논문·이용자 경험과 AI 해석을 구별해 비교합니다."
-        action={
-          <Button primary onClick={() => setEditing((v) => !v)}>
-            <Plus />
-            근거 추가
-          </Button>
-        }
+        title="조사"
+        sub="비교할 자료를 저장하고 조사 내용을 노트로 정리하세요."
+        action={view === "notes" || (!editing && sources.length > 0) ? addAction : undefined}
       />
+      <Tabs label="조사 보기" items={[["sources", "자료"], ["notes", "조사 노트"]]}>
+      {view === "sources" ? <>
       {editing && (
         <section className="panel spaced">
-          <h3>출처와 주장을 함께 기록</h3>
+          <h2>자료 추가</h2>
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              save();
+              if (!busy) void save();
             }}
           >
+            <fieldset className="form-stack spaced" disabled={busy} style={{ border: 0, padding: 0, marginInline: 0 }}>
             <div className="columns">
-              <label>
-                자료 이름
+              <Field label="자료 이름">
                 <input
+                  autoFocus
                   required
                   maxLength={240}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
-              </label>
-              <label>
-                근거 종류
+              </Field>
+              <Field label="자료 종류">
                 <select value={kind} onChange={(e) => setKind(e.target.value)}>
                   {["official", "paper", "community"].map((k) => (
                     <option key={k} value={k}>
@@ -108,44 +137,52 @@ export function ResearchPage() {
                     </option>
                   ))}
                 </select>
-              </label>
+              </Field>
             </div>
-            <label>
-              HTTPS 원문 링크
+            <Field label="HTTPS 원문 링크">
               <input
                 required
                 type="url"
                 pattern="https://.*"
                 value={url}
-                onChange={(e) => setUrl(e.target.value)}
+                onChange={(e) => { setUrl(e.target.value); setFetched(null); setVerified(false); }}
               />
-            </label>
-            <label>
-              확인할 주장·찬반 이유
+            </Field>
+            <div><Button disabled={busy || !url.trim()} onClick={() => void perform(async () => {
+              const result = await native<NonNullable<Source["fetched"]>>("fetch_reference", { url });
+              setFetched(result);
+              setUrl(result.url);
+              setTitle(titleFromQuestion(result.title, "가져온 원문"));
+              setVerified(false);
+            })}>URL에서 원문 가져오기</Button></div>
+            {fetched && <section className="note">
+              <p className="micro">원문 수집 {when(fetched.fetchedAt)} · {fetched.url}</p>
+              <p className="small">원문에서 확인할 구절을 읽고 아래 주장·조건을 작성하세요.</p>
+              <pre style={{ maxHeight: 260, overflow: "auto", whiteSpace: "pre-wrap" }}>{fetched.text}</pre>
+            </section>}
+            <Field label="자료에서 확인할 내용">
               <textarea
                 required
                 maxLength={20000}
                 value={claim}
                 onChange={(e) => setClaim(e.target.value)}
               />
-            </label>
+            </Field>
             <div className="columns">
-              <label>
-                적용 조건·다른 의견
+              <Field label="적용 조건·다른 의견">
                 <textarea
                   maxLength={20000}
                   value={conditions}
                   onChange={(e) => setConditions(e.target.value)}
                 />
-              </label>
-              <label>
-                관련 버전·환경
+              </Field>
+              <Field label="관련 버전·환경">
                 <input
                   maxLength={200}
                   value={version}
                   onChange={(e) => setVersion(e.target.value)}
                 />
-              </label>
+              </Field>
             </div>
             <label className="checkline">
               <input
@@ -160,64 +197,34 @@ export function ResearchPage() {
                 </small>
               </span>
             </label>
-            <Button primary type="submit" disabled={busy}>
-              근거 저장
-            </Button>
+            <Actions>
+              <Button disabled={busy} onClick={() => {
+                focusAfterClose.current = "add";
+                setEditing(false);
+              }}>취소</Button>
+              <Button primary type="submit" disabled={busy}><Save aria-hidden="true" />자료 저장</Button>
+            </Actions>
+            </fieldset>
           </form>
         </section>
       )}
       {sources.length ? (
         <section className="panel spaced">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th style={{ width: "24%" }}>출처와 확인 상태</th>
-                <th>주장·상반된 조건</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sources.map((source) => (
-                <tr key={source.id}>
-                  <td>
-                    <Badge accent={source.kind === "official"}>
-                      {sourceKinds[source.kind]}
-                    </Badge>
-                    <h3 className="spaced-text">{source.title}</h3>
-                    <p className="micro">
-                      {source.verified ? "사용자 원문 확인" : "원문 확인 필요"}
-                    </p>
-                    <Button
-                      quiet
-                      onClick={() =>
-                        void perform(() =>
-                          native("open_reference", { url: source.url }),
-                        )
-                      }
-                    >
-                      <ExternalLink />
-                      원문
-                    </Button>
-                  </td>
-                  <td>
-                    <p>{source.claim}</p>
-                    {source.conditions && (
-                      <p className="muted">조건·반론: {source.conditions}</p>
-                    )}
-                    <p className="micro">
-                      {source.version || "버전·환경 미기록"} · 등록{" "}
-                      {when(source.recordedAt)}
-                    </p>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!sources.some((r) => r.kind === "official" && r.verified) && (
-            <div className="note">
-              확인한 공식 자료가 없습니다. 조사 근거가 불완전한 상태로
-              유지합니다.
-            </div>
-          )}
+          <div className="section-heading" style={{ marginTop: 0 }}><h2>조사 자료</h2><span className="small muted">{sources.length}개</span></div>
+          <div className="source-list">
+            {sources.map((source) => <DisclosureRow key={source.id}
+              title={source.title} meta={`${sourceKinds[source.kind]} · ${when(source.recordedAt)}`}
+              status={<Badge tone={source.verified ? "success" : undefined}>{source.verified ? "사용자 원문 확인" : "원문 확인 필요"}</Badge>}
+              expanded={selectedSource === source.id} onToggle={() => setSelectedSource(selectedSource === source.id ? "" : source.id)}
+              buttonRef={selectedSource === source.id ? savedRow : undefined}>
+                <h3>자료에서 확인할 내용</h3><p className="small">{source.claim}</p>
+                {source.conditions && <><h3>적용 조건과 다른 의견</h3><p className="small muted">{source.conditions}</p></>}
+                {source.version && <p className="micro">버전·환경: {source.version}</p>}
+                {source.fetched && <details><summary>가져온 원문 · {when(source.fetched.fetchedAt)}</summary><pre className="reference-text">{source.fetched.text}</pre></details>}
+                <Actions><Button onClick={() => void perform(() => native("open_reference", { url: source.url }))}><ExternalLink />원문</Button></Actions>
+            </DisclosureRow>)}
+          </div>
+          <Actions>
           <Button
             primary
             onClick={() =>
@@ -227,36 +234,66 @@ export function ResearchPage() {
               )
             }
           >
-            선택한 근거로 비교 대화
+            자료 비교하기
           </Button>
+          </Actions>
         </section>
-      ) : (
-        <Empty
-          title="다시 쓸 수 있는 조사 근거를 모아보세요"
-          action={
-            <Button primary onClick={() => setEditing(true)}>
-              첫 근거 추가
-            </Button>
-          }
-        >
-          공식 자료는 필수 근거로, 주제에 맞는 논문과 실제 이용자 의견은 별도로
-          기록합니다. 서로 다른 이유와 적용 조건을 함께 비교할 수 있습니다.
-        </Empty>
+      ) : !editing && (
+        <div className="empty-list">
+          <p className="muted">등록한 자료가 없습니다. 비교할 자료의 링크와 확인할 내용을 추가하세요.</p>
+          <Actions>{addAction}</Actions>
+        </div>
       )}
+      </> : <>
+      <section className="note-list" aria-label="조사 노트 목록">
       {s.workspace.notes
         .filter((n) => n.projectId === projectId && n.kind === "research")
         .map((n) => (
-          <article className="panel spaced" key={n.id}>
-            <Badge>조사 정리·해석</Badge>
-            <h2 className="spaced-text">{n.title}</h2>
+          <DisclosureRow key={n.id} title={n.title} meta={when(n.createdAt)}
+            expanded={selectedNote === n.id} onToggle={() => setSelectedNote(selectedNote === n.id ? "" : n.id)}>
             <MarkdownContent text={n.body} />
-          </article>
+          </DisclosureRow>
         ))}
-      <div className="note">
-        현재는 등록한 원문·문서·기록을 대화의 근거로 전달합니다. 링크를 등록하는
-        동작이 웹 원문의 자동 수집·검증을 뜻하지 않습니다.
-      </div>
+      {!s.workspace.notes.some((note) => note.projectId === projectId && note.kind === "research") && <p className="small muted">조사 노트가 없습니다. 자료를 비교한 대화의 답변을 조사 노트로 저장할 수 있습니다.</p>}
+      </section><NoteExport kind="research" />
+      </>}
+      </Tabs>
     </>
+  );
+}
+function minutesLabel(value: number | null | undefined) {
+  if (value == null) return "-";
+  return value >= 60 ? `${Math.floor(value / 60)}시간 ${value % 60}분` : `${value}분`;
+}
+/** Estimates from similar finished, timed tasks; without them it says so instead of guessing. */
+function TaskEstimate({ task }: { task: Task }) {
+  const { snapshot: s, busy, perform } = useWorkspace();
+  const [result, setResult] = useState<EstimateResult | null>(null);
+  const last = result?.estimate ?? task.estimates?.at(-1);
+  const previous = (task.estimates?.length ?? 0) > 1 ? task.estimates?.at(-2) : undefined;
+  return (
+    <div className="task-estimate">
+      {last ? (
+        <p className="small">
+          {last.method === "no-comparable-task"
+            ? "비교할 완료 작업이 없어 예상하지 않았습니다. 타이머로 측정하고 끝낸 비슷한 작업이 생기면 다시 계산하세요."
+            : <>잠정 예상 <strong>{minutesLabel(last.medianMinutes)}</strong> (범위 {minutesLabel(last.lowMinutes)}~{minutesLabel(last.highMinutes)}) · 비슷한 완료 작업 {last.basisTaskIds.length}개 기준{last.method === "single-reference" ? " · 근거 1개라 참고용" : ""}</>}
+          {previous && previous.medianMinutes !== last.medianMinutes && <small className="micro"> · 이전 예상 {minutesLabel(previous.medianMinutes)}에서 근거가 바뀌어 갱신</small>}
+        </p>
+      ) : null}
+      {result && result.references.length > 0 && (
+        <ul className="micro">
+          {result.references.map((r) => (
+            <li key={r.taskId}>{r.title} · {s.workspace.projects.find((p) => p.id === r.projectId)?.name} · {r.phase} · 실제 {minutesLabel(r.minutes)}{r.userTested ? " · 사용자 확인" : ""}</li>
+          ))}
+        </ul>
+      )}
+      {!task.completed && (
+        <Button quiet disabled={busy} onClick={() => void perform(async () => {
+          setResult(await native<EstimateResult>("estimate_task", { id: task.id }));
+        })}>실적으로 예상</Button>
+      )}
+    </div>
   );
 }
 export function WorkPage() {
@@ -265,6 +302,8 @@ export function WorkPage() {
     [phase, setPhase] = useState("설계"),
     [due, setDue] = useState(""),
     [clock, setClock] = useState(Date.now());
+  const [referenceTaskIds, setReferenceTaskIds] = useState<string[]>([]);
+  useEffect(() => setReferenceTaskIds([]), [projectId]);
   useEffect(() => {
     const timer = setInterval(() => setClock(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -317,34 +356,33 @@ export function WorkPage() {
         title="작업과 다음 계획"
         sub="작업 관점·실제 소요·사용자 확인과 남은 조건을 연결합니다."
       />
-      <Tabs
+      <Tabs label="작업 보기"
         items={[
           ["tasks", "작업·일정"],
           ["time", "시간·실적"],
           ["planning", "다음 계획"],
         ]}
-      />
+      >
       {view === "tasks" ? (
         <>
           <section className="panel">
             <form
+              className="form-stack"
               onSubmit={(e) => {
                 e.preventDefault();
-                void add();
+                if (!busy) void add();
               }}
             >
               <div className="columns">
-                <label>
-                  이어갈 작업
+                <Field label="이어갈 작업">
                   <input
                     required
                     maxLength={240}
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                   />
-                </label>
-                <label>
-                  작업 관점
+                </Field>
+                <Field label="작업 관점">
                   <input
                     list="task-phases"
                     maxLength={80}
@@ -364,20 +402,19 @@ export function WorkPage() {
                       <option key={p}>{p}</option>
                     ))}
                   </datalist>
-                </label>
+                </Field>
               </div>
-              <label>
-                일정 · 선택 사항
+              <Field label="일정 · 선택 사항">
                 <input
                   type="datetime-local"
                   value={due}
                   onChange={(e) => setDue(e.target.value)}
                 />
-              </label>
-              <Button primary type="submit" disabled={busy}>
-                <Plus />
+              </Field>
+              <Actions><Button primary type="submit" disabled={busy}>
+                <Plus aria-hidden="true" />
                 작업 추가
-              </Button>
+              </Button></Actions>
             </form>
           </section>
           {tasks.map((task) => {
@@ -400,8 +437,11 @@ export function WorkPage() {
                     ? "일정 " + when(task.dueAt, s.workspace.settings.timezone)
                     : "일정 미정"}{" "}
                   · 본인 투입 {duration(taskMilliseconds(task, clock))}
+                  {task.originId && (s.workspace.discoveries ?? []).some((d) => d.id === task.originId) &&
+                    ` · 발견에서 시작: ${s.workspace.discoveries?.find((d) => d.id === task.originId)?.title}`}
                 </p>
-                <div className="inline spaced-text">
+                <TaskEstimate task={task} />
+                <Actions>
                   <Button
                     disabled={busy || task.completed}
                     onClick={() =>
@@ -414,7 +454,7 @@ export function WorkPage() {
                       )
                     }
                   >
-                    {running ? <Square /> : <Play />}
+                    {running ? <Square aria-hidden="true" /> : <Play aria-hidden="true" />}
                     {running ? "시간 기록 중지" : "본인 작업 기록"}
                   </Button>
                   <Button
@@ -430,6 +470,7 @@ export function WorkPage() {
                       )
                     }
                   >
+                    {task.completed ? <RotateCcw aria-hidden="true" /> : <Check aria-hidden="true" />}
                     {task.completed ? "작업 다시 열기" : "작업 완료"}
                   </Button>
                   <Button
@@ -445,9 +486,10 @@ export function WorkPage() {
                       )
                     }
                   >
+                    {task.userTested ? <ClipboardX aria-hidden="true" /> : <ClipboardCheck aria-hidden="true" />}
                     {task.userTested ? "사용자 확인 취소" : "사용자 확인 기록"}
                   </Button>
-                </div>
+                </Actions>
               </section>
             );
           })}
@@ -529,7 +571,19 @@ export function WorkPage() {
             현재 기록만으로 개인별 예상 정확도가 검증된 것은 아닙니다. 임의의
             기간으로 채우지 않고 가정·누락·범위를 함께 설명합니다.
           </div>
-          <Button
+          <h3>계획에 참고할 다른 프로젝트 실적</h3>
+          <p className="small muted">현재 프로젝트의 작업 50개와 다른 프로젝트에서 선택한 작업 최대 50개를 참고합니다.</p>
+          {s.workspace.tasks.filter((task) => task.projectId !== projectId).map((task) => (
+            <label className="checkline" key={task.id}>
+              <input type="checkbox" disabled={!referenceTaskIds.includes(task.id) && referenceTaskIds.length >= 50} checked={referenceTaskIds.includes(task.id)} onChange={(event) =>
+                setReferenceTaskIds(event.target.checked ? [...referenceTaskIds, task.id] : referenceTaskIds.filter((id) => id !== task.id))
+              } />
+              <span>{s.workspace.projects.find((project) => project.id === task.projectId)?.name} · {task.title}
+                <small>{task.phase} · {duration(taskMilliseconds(task, clock))} · {task.userTested ? "사용자 확인됨" : task.completed ? "작업 완료" : "진행 중"}</small>
+              </span>
+            </label>
+          ))}
+          <Actions><Button
             primary
             onClick={() =>
               ask(
@@ -547,19 +601,27 @@ export function WorkPage() {
                       })),
                   ),
                 "planning",
+                [],
+                {
+                  taskIds: [...tasks.slice(0, 50).map((task) => task.id), ...referenceTaskIds],
+                  projectIds: [...new Set([projectId, ...s.workspace.tasks.filter((task) => referenceTaskIds.includes(task.id)).map((task) => task.projectId)])],
+                },
               )
             }
           >
-            범위와 근거로 계획 대화
-          </Button>
+            계획 작성
+          </Button></Actions>
         </section>
       )}
+      </Tabs>
     </>
   );
 }
 export function SettingsPage() {
-  const { snapshot: s, busy, perform, navigate } = useWorkspace();
+  const { snapshot: s, busy, perform, navigate, tab } = useWorkspace();
   const [draft, setDraft] = useState<Settings>({ ...s.workspace.settings });
+  const category = getSettingsSection(tab);
+  const view = category.id;
   function update<K extends keyof Settings>(key: K, value: Settings[K]) {
     setDraft((previous) => ({ ...previous, [key]: value }));
   }
@@ -572,11 +634,10 @@ export function SettingsPage() {
   return (
     <>
       <Heading
-        title="도구 연결과 설정"
-        sub="AI 도구 연결·기록 저장·알림과 돌아보기를 설정합니다."
+        title={category.label}
+        sub={category.description}
       />
-      <ToolConnections />
-      <section className="panel">
+          {view === "tools" ? <ToolConnections /> : <section className="panel">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -586,19 +647,25 @@ export function SettingsPage() {
             );
           }}
         >
-          <div className="form-row">
+          {view === "collection" && <><div className="form-row">
             <div>
               <strong>기록·문서 백업 저장 위치</strong>
-              <p>{draft.stateDirectory || "아직 선택하지 않음"}</p>
+              <p>{draft.stateDirectory ?? s.defaultStateDirectory}</p>
+              <p className="small muted">저장 위치를 바꾸면 해당 폴더의 기록과 백업을 사용합니다.</p>
             </div>
-            <Button onClick={() => void storage()}>폴더 선택</Button>
+            <div className="inline">
+              <Button onClick={() => void storage()}>저장 위치 변경</Button>
+              {draft.stateDirectory !== null && (
+                <Button onClick={() => update("stateDirectory", null)}>기본 위치 사용</Button>
+              )}
+            </div>
           </div>
           <div className="form-row">
             <div>
               <strong>백그라운드 수집과 안내</strong>
               <p>
-                켜면 창을 닫아도 트레이에서 실행합니다. 트레이의 종료를 누르면
-                완전히 종료합니다.
+                켠 뒤 설정을 저장하면 연결된 프로젝트의 AI 기록을 바로
+                가져옵니다. 창을 닫아도 트레이에서 수집을 이어갑니다.
               </p>
             </div>
             <input
@@ -608,10 +675,11 @@ export function SettingsPage() {
               onChange={(e) => update("backgroundEnabled", e.target.checked)}
             />
           </div>
-          <div className="form-row">
+          </>}
+          {view === "review" && <><div className="form-row">
             <div>
               <strong>발견 즉시 알림</strong>
-              <p>확인한 반복 요청과 일간·주간 회고를 알려줍니다.</p>
+              <p>새 발견과 일간·주간 회고를 Windows 알림으로도 알려줍니다. 앱 안의 알림은 항상 남습니다.</p>
             </div>
             <input
               aria-label="발견 즉시 알림"
@@ -621,6 +689,29 @@ export function SettingsPage() {
                 update("immediateNotifications", e.target.checked)
               }
             />
+          </div>
+          <div className="form-row">
+            <div>
+              <strong>수집 후 자동 AI 분석</strong>
+              <p>백그라운드 수집에서 새 요청이 5개 이상 쌓이면 최대 6시간에 한 번 분석합니다. 선택한 AI 도구의 이용 한도를 사용합니다.</p>
+            </div>
+            <input
+              aria-label="수집 후 자동 AI 분석"
+              type="checkbox"
+              checked={draft.autoAnalysis ?? false}
+              onChange={(e) => update("autoAnalysis", e.target.checked)}
+            />
+          </div>
+          <div className="form-row">
+            <strong>분석에 쓸 AI 도구</strong>
+            <select
+              aria-label="분석에 쓸 AI 도구 기본값"
+              value={draft.analysisProvider ?? "codex"}
+              onChange={(e) => update("analysisProvider", e.target.value === "claude" ? "claude" : "codex")}
+            >
+              <option value="codex">Codex</option>
+              <option value="claude">Claude Code</option>
+            </select>
           </div>
           <div className="form-row">
             <div>
@@ -673,7 +764,8 @@ export function SettingsPage() {
               <option>UTC</option>
             </select>
           </div>
-          <div className="form-row">
+          </>}
+          {view === "collection" && <div className="form-row">
             <div>
               <strong>수집 간격 · 초</strong>
               <p>설정한 저장 위치에 연결된 프로젝트를 순차 수집합니다.</p>
@@ -689,8 +781,8 @@ export function SettingsPage() {
                 update("collectionIntervalSecs", Number(e.target.value))
               }
             />
-          </div>
-          <div className="form-row">
+          </div>}
+          {view === "appearance" && <div className="form-row">
             <strong>화면 테마</strong>
             <select
               aria-label="화면 테마"
@@ -710,24 +802,22 @@ export function SettingsPage() {
               <option value="light">밝게</option>
               <option value="dark">어둡게</option>
             </select>
-          </div>
-          <div className="note">
+          </div>}
+          {(view === "collection" || view === "app") && <div className="note">
             앱이 완전히 종료된 동안에는 수집·알림을 실행하지 않습니다. 다시
             실행한 뒤 수집 범위와 마지막 반영 시점을 확인할 수 있습니다.
-          </div>
-          <div className="inline">
-            <Button primary type="submit" disabled={busy}>
-              설정 저장
-            </Button>
-            <Button onClick={() => navigate("reports")}>일간·주간 회고</Button>
-            <Button
+          </div>}
+          <Actions>
+            {view === "review" && <Button onClick={() => navigate("reports")}>일간·주간 회고</Button>}
+            {view === "app" && <Button
               onClick={() => void perform(() => native("quit_application"))}
             >
               앱 완전히 종료
-            </Button>
-          </div>
+            </Button>}
+            {view !== "app" && <Button primary type="submit" disabled={busy}>설정 저장</Button>}
+          </Actions>
         </form>
-      </section>
+          </section>}
     </>
   );
 }
@@ -737,27 +827,40 @@ interface ChatProps {
   mode: string;
   setMode: (value: string) => void;
   evidenceIds: string[];
+  originId?: string;
 }
+const noteKindForMode: { [mode: string]: string } = {
+  learning: "learning",
+  research: "research",
+  rule: "rule",
+  planning: "decision",
+};
 export function ChatPage({
   question,
   setQuestion,
   mode,
   setMode,
   evidenceIds,
+  originId,
 }: ChatProps) {
-  const { snapshot: s, projectId, busy, perform } = useWorkspace();
+  const { snapshot: s, projectId, busy, perform, chatSelection } = useWorkspace();
   const [provider, setProvider] = useState("codex"),
+    [materialsOpen, setMaterialsOpen] = useState(false),
     [projects, setProjects] = useState<string[]>([projectId]),
     [recordIds, setRecordIds] = useState<string[]>(evidenceIds),
     [documentKeys, setDocumentKeys] = useState<string[]>([]),
     [includeSources, setIncludeSources] = useState(true),
     [activeId, setActiveId] = useState<string | null>(null),
-    [noteKind, setNoteKind] = useState("analysis");
+    [noteKind, setNoteKind] = useState("analysis"),
+    [origins, setOrigins] = useState<{ [chatId: string]: string }>({});
   useEffect(() => {
-    setProjects([projectId]);
-    setDocumentKeys([]);
+    setNoteKind(noteKindForMode[mode] ?? "analysis");
+  }, [mode]);
+  useEffect(() => {
+    setProjects(chatSelection?.projectIds ?? [projectId]);
+    setDocumentKeys(chatSelection?.documents?.map((document) => `${document.projectId}:${document.path}`) ?? []);
     setActiveId(null);
-  }, [projectId]);
+  }, [projectId, chatSelection]);
   useEffect(() => {
     setRecordIds(evidenceIds);
   }, [evidenceIds]);
@@ -777,24 +880,27 @@ export function ChatPage({
     .map((d) => ({
       projectId: d.projectId,
       path: d.path,
-      revision: d.revision,
+      revision: chatSelection?.documents?.find((document) => document.projectId === d.projectId && document.path === d.path)?.revision ?? d.revision,
     }));
   const chats = s.workspace.chats.filter((c) => c.projectId === projectId);
   const active = chats.find((c) => c.id === activeId);
   const running = active?.status === "running";
+  const originDiscovery = active ? s.workspace.discoveries?.find((d) => d.id === origins[active.id]) : undefined;
+  const noteSuffix: { [kind: string]: string } = { learning: "학습 카드", research: "조사 정리", rule: "규칙 초안", decision: "결정", analysis: "분석" };
   const response = active?.messages
     .filter((m) => m.role === "assistant")
     .at(-1)?.text;
-  async function send() {
+  async function send(text = question) {
     await perform(async () => {
       const result = await native<{ id: string }>("start_chat", {
         request: {
           projectId,
           provider,
-          question,
+          question: text,
           projectIds: projects,
           recordIds: selectedRecords.map((r) => r.id),
           documents: selectedDocuments,
+          taskIds: chatSelection?.taskIds?.filter((id) => s.workspace.tasks.some((task) => task.id === id && projects.includes(task.projectId))) ?? [],
           sourceIds: includeSources
             ? s.workspace.sources
                 .filter((source) => projects.includes(source.projectId))
@@ -804,6 +910,9 @@ export function ChatPage({
           mode,
         },
       });
+      // A follow-up keeps the discovery that started the conversation.
+      const origin = activeId ? origins[activeId] : originId;
+      if (origin) setOrigins((value) => ({ ...value, [result.id]: origin }));
       setActiveId(result.id);
       setQuestion("");
     });
@@ -822,8 +931,8 @@ export function ChatPage({
   return (
     <>
       <Heading
-        title="맥락을 이어가는 대화"
-        sub="사용 중인 공식 CLI의 로그인으로 실행하고, 질문에 포함할 자료를 선택합니다."
+        title="대화"
+        sub="질문을 입력하세요. 문서나 이전 기록이 필요하면 자료를 추가할 수 있습니다."
         action={
           <Button
             onClick={() => {
@@ -835,8 +944,15 @@ export function ChatPage({
           </Button>
         }
       />
-      <div className="chat-layout">
-        <aside className="chat-context">
+      <div className="chat-workspace">
+        <div className="chat-material-bar">
+          <Button aria-expanded={materialsOpen} aria-controls="chat-materials" onClick={() => setMaterialsOpen((value) => !value)}>자료 선택</Button>
+          <span className="micro">문서 {selectedDocuments.length}개 · 기록 {selectedRecords.length}개 · 참고 자료 {includeSources ? s.workspace.sources.filter((source) => projects.includes(source.projectId)).length : 0}개</span>
+        </div>
+        {materialsOpen && <section className="chat-materials" id="chat-materials" aria-label="질문에 포함할 자료">
+          <p className="small muted">체크한 자료를 질문에 함께 전달합니다.</p>
+          <div className="chat-material-columns">
+          <div>
           <h3 style={{ marginTop: 0 }}>함께 볼 프로젝트</h3>
           {s.workspace.projects.map((p) => (
             <label className="checkline" key={p.id}>
@@ -848,34 +964,8 @@ export function ChatPage({
               <span>{p.name}</span>
             </label>
           ))}
-          <h3>사용할 AI 도구</h3>
-          <select
-            aria-label="사용할 AI 도구"
-            value={provider}
-            onChange={(e) => setProvider(e.target.value)}
-          >
-            <option value="codex">Codex</option>
-            <option value="claude">Claude Code</option>
-            <option disabled>Antigravity · 실행 미검증</option>
-          </select>
-          <h3>질문의 관점</h3>
-          <select
-            aria-label="질문의 관점"
-            value={mode}
-            onChange={(e) => setMode(e.target.value)}
-          >
-            {[
-              ["chat", "자유 질문"],
-              ["analysis", "사용·지식 분석"],
-              ["research", "조사·의견 비교"],
-              ["learning", "학습·요청 개선"],
-              ["planning", "작업·계획"],
-            ].map(([id, label]) => (
-              <option key={id} value={id}>
-                {label}
-              </option>
-            ))}
-          </select>
+          </div>
+          <div>
           <h3>원문 기록</h3>
           <Button
             quiet
@@ -903,6 +993,8 @@ export function ChatPage({
               </span>
             </label>
           ))}
+          </div>
+          <div>
           <h3>프로젝트 문서</h3>
           {allDocuments.slice(0, 60).map((d) => (
             <label
@@ -937,24 +1029,11 @@ export function ChatPage({
             />
             <span>등록한 조사 근거 포함</span>
           </label>
-          <p className="micro spaced-text">
-            선택한 자료를 전달합니다. Codex는 읽기 전용 프로젝트 모드, Claude는
-            파일 도구 없이 실행합니다. 파일 변경은 별도 검토·적용 경로를
-            사용합니다.
-          </p>
-        </aside>
-        <section>
-          <div className="inline">
-            <Badge accent>
-              {provider === "codex" ? "Codex" : "Claude Code"}
-            </Badge>
-            <Badge>
-              원문 {selectedRecords.length}개 · 문서 {selectedDocuments.length}
-              개
-            </Badge>
-            {active && <Badge>{active.status}</Badge>}
           </div>
-          {active ? (
+          </div>
+        </section>}
+        <section>
+          {active && (
             <>
               {active.messages.map((m, i) => (
                 <article className="chat-message" key={i}>
@@ -986,13 +1065,14 @@ export function ChatPage({
               )}
               {active.error && (
                 <div role="alert" className="note">
-                  {active.error.message}
+                  <p>{errorMessage(active.error)}</p>
+                  <Button disabled={busy} onClick={() => void send(active.messages.filter((message) => message.role === "user").at(-1)?.text ?? "")}>다시 시도</Button>
                 </div>
               )}
               {response && (
                 <section className="panel spaced">
                   <h3>이 판단을 다음 작업으로</h3>
-                  <div className="inline spaced-text">
+                  <Actions>
                     <select
                       aria-label="응답 저장 종류"
                       value={noteKind}
@@ -1019,11 +1099,12 @@ export function ChatPage({
                               operation: "note",
                               projectId,
                               kind: noteKind,
-                              title:
-                                active.messages[0]?.text.slice(0, 100) ||
-                                "대화에서 남긴 판단",
+                              title: originDiscovery
+                                ? `${originDiscovery.title} · ${noteSuffix[noteKind] ?? "노트"}`
+                                : titleFromQuestion(active.messages[0]?.text ?? "", "대화에서 남긴 판단"),
                               body: response,
                               evidenceIds: active.evidenceIds,
+                              originId: origins[active.id],
                             }),
                           "근거와 함께 노트를 저장했습니다.",
                         )
@@ -1039,10 +1120,9 @@ export function ChatPage({
                             mutate({
                               operation: "addTask",
                               projectId,
-                              title:
-                                active.messages[0]?.text.slice(0, 100) ||
-                                "대화 후속 작업",
+                              title: originDiscovery?.title ?? titleFromQuestion(active.messages[0]?.text ?? "", "대화 후속 작업"),
                               phase: "검토",
+                              originId: origins[active.id],
                             }),
                           "후속 작업을 추가했습니다.",
                         )
@@ -1050,18 +1130,10 @@ export function ChatPage({
                     >
                       후속 작업 추가
                     </Button>
-                  </div>
+                  </Actions>
                 </section>
               )}
             </>
-          ) : (
-            <section className="panel spaced">
-              <h2>궁금한 지점에서 바로 이어가세요.</h2>
-              <p className="small muted spaced-text">
-                분석을 되묻고, 모호했던 개념을 확인하거나 새로운 접근을 조사할
-                수 있습니다. 기록·문서·프로젝트의 범위를 확인한 뒤 질문하세요.
-              </p>
-            </section>
           )}
           <form
             className="compose"
@@ -1070,16 +1142,23 @@ export function ChatPage({
               void send();
             }}
           >
+            <label className="chat-question-label" htmlFor="chat-question">질문</label>
             <textarea
+              id="chat-question"
               required
               maxLength={16000}
               aria-label="질문 입력"
-              placeholder="궁금한 점을 자유롭게 적어주세요"
+              placeholder="예: 이 프로젝트에서 아직 결정하지 않은 사항을 정리해 줘."
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
             />
-            <div className="inline">
-              <span className="micro">기존 CLI 구독·인증 환경 사용</span>
+            <div className="chat-compose-controls">
+              <label>AI 도구<select aria-label="사용할 AI 도구" value={provider} onChange={(event) => setProvider(event.target.value)}>
+                <option value="codex">Codex</option><option value="claude">Claude Code</option>
+              </select></label>
+              <label>질문 유형<select aria-label="질문의 관점" value={mode} onChange={(event) => setMode(event.target.value)}>
+                {[["chat", "자유 질문"], ["analysis", "사용·지식 분석"], ["research", "조사·의견 비교"], ["learning", "학습·요청 개선"], ["rule", "규칙 초안"], ["planning", "작업·계획"]].map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+              </select></label>
               <Button
                 primary
                 type="submit"
@@ -1092,8 +1171,16 @@ export function ChatPage({
               </Button>
             </div>
           </form>
+          {!active && <div className="chat-examples">
+            <span>질문 예시</span>
+            <Button quiet aria-label="문서 요약 질문 작성" disabled={!allDocuments.length} onClick={() => {
+              setDocumentKeys(allDocuments.slice(0, 20).map((document) => `${document.projectId}:${document.path}`));
+              setQuestion("선택한 프로젝트 문서의 핵심 내용과 아직 결정하지 않은 사항을 요약해 줘.");
+            }}>문서 요약</Button>
+            <Button quiet onClick={() => setQuestion("이 프로젝트에서 다음에 확인할 조건과 해야 할 일을 정리해 줘.")}>다음 작업 정리</Button>
+          </div>}
           <div className="section-heading">
-            <h3>이 프로젝트의 대화</h3>
+            <h3>이전 대화</h3>
           </div>
           {chats
             .slice()
@@ -1110,6 +1197,7 @@ export function ChatPage({
                 <Button
                   onClick={() => {
                     setActiveId(chat.id);
+                    setProvider(chat.provider);
                     setQuestion("");
                   }}
                 >
@@ -1117,6 +1205,7 @@ export function ChatPage({
                 </Button>
               </div>
             ))}
+          {!chats.length && <p className="small muted">아직 대화가 없습니다. 위에서 첫 질문을 작성하세요.</p>}
         </section>
       </div>
     </>

@@ -9,7 +9,7 @@ use serde::Serialize;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fs::{self, File},
     io::Read,
     path::{Component, Path, PathBuf},
@@ -37,6 +37,21 @@ const EXCLUDED_DIRECTORIES: &[&str] = &[
 
 /// Read a document from the same inventory exposed by `scan`, preserving its scope.
 pub fn read(project: &Project, path: &str, expected_revision: Option<&str>) -> Result<Value> {
+    validate_relative(path)?;
+    read_scanned(project, &scan(project)?, path, expected_revision)
+}
+/// Reads several documents against one inventory; each entry is a document or an error.
+pub fn read_many(project: &Project, paths: &[String]) -> Result<Vec<Result<Value>>> {
+    let inventory = scan(project)?;
+    Ok(paths
+        .iter()
+        .map(|path| {
+            validate_relative(path)?;
+            read_scanned(project, &inventory, path, None)
+        })
+        .collect())
+}
+fn validate_relative(path: &str) -> Result<()> {
     let relative = Path::new(path);
     if path.is_empty()
         || path.contains('\\')
@@ -49,7 +64,15 @@ pub fn read(project: &Project, path: &str, expected_revision: Option<&str>) -> R
             "Choose a document in this project.",
         ));
     }
-    let inventory = scan(project)?;
+    Ok(())
+}
+fn read_scanned(
+    project: &Project,
+    inventory: &Value,
+    path: &str,
+    expected_revision: Option<&str>,
+) -> Result<Value> {
+    let relative = Path::new(path);
     let document = inventory["documents"]
         .as_array()
         .and_then(|items| {
@@ -417,6 +440,10 @@ fn proposals(documents: &[Document]) -> Vec<Value> {
 
 /// Read-only inventory: no model, persistent index, document rewrite, or implicit init.
 pub fn scan(project: &Project) -> Result<Value> {
+    scan_with_documents(project, |_, _| {})
+}
+
+fn scan_with_documents(project: &Project, mut visit: impl FnMut(&Document, &str)) -> Result<Value> {
     let excluded = Arc::new(Mutex::new(Vec::new()));
     let filtered = Arc::clone(&excluded);
     let root = project.root.clone();
@@ -528,14 +555,16 @@ pub fn scan(project: &Project) -> Result<Value> {
                 continue;
             }
         };
-        documents.push(parse(
+        let document = parse(
             project,
             Path::new(&path),
             &bytes,
             text,
             &mut matcher,
             &mut warnings,
-        ));
+        );
+        visit(&document, text);
+        documents.push(document);
     }
     documents.sort_by(|a, b| a.path.cmp(&b.path));
     let mut excluded = excluded.lock().expect("scan exclusions").clone();
@@ -578,4 +607,59 @@ pub fn scan(project: &Project) -> Result<Value> {
         "excluded": excluded,
         "warnings": warnings
     }))
+}
+
+/// One project's normalized bodies, invalidated by the same revisions as reads.
+#[derive(Default)]
+pub struct SearchIndex {
+    project_id: String,
+    normalized: BTreeMap<String, (String, String)>,
+}
+impl SearchIndex {
+    pub fn search(&mut self, project: &Project, query: &str) -> Result<Value> {
+        let query = query.trim().to_lowercase();
+        if query.is_empty() || query.len() > 1024 {
+            return Err(Error::new(
+                "INVALID_SEARCH",
+                "Enter a search phrase of at most 1024 bytes.",
+            ));
+        }
+        if self.project_id != project.id() {
+            self.normalized.clear();
+            self.project_id = project.id().into();
+        }
+        let mut seen = BTreeSet::new();
+        let mut matches = Vec::new();
+        let mut truncated = false;
+        let report = scan_with_documents(project, |document, text| {
+            seen.insert(document.path.clone());
+            let cached = self.normalized.entry(document.path.clone()).or_default();
+            if cached.0 != document.revision {
+                *cached = (document.revision.clone(), text.to_lowercase());
+            }
+            let metadata = format!(
+                "{} {}",
+                document.title.as_deref().unwrap_or(""),
+                document.path
+            )
+            .to_lowercase();
+            if !metadata.contains(&query) && !cached.1.contains(&query) {
+                return;
+            }
+            if matches.len() == 200 {
+                truncated = true;
+                return;
+            }
+            let (line, snippet) = text
+                .lines()
+                .enumerate()
+                .find(|(_, line)| line.to_lowercase().contains(&query))
+                .unwrap_or((0, document.title.as_deref().unwrap_or(&document.path)));
+            matches.push(json!({"id":document.id,"path":document.path,"title":document.title,"revision":document.revision,"bytes":document.bytes,"links":document.links,"line":line+1,"snippet":snippet.chars().take(300).collect::<String>()}));
+        })?;
+        self.normalized.retain(|path, _| seen.contains(path));
+        Ok(
+            json!({"status":report["status"],"matches":matches,"warnings":report["warnings"],"truncated":truncated}),
+        )
+    }
 }

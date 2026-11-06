@@ -1,33 +1,42 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Bell,
+  ArrowLeft,
+  BookMarked,
   CalendarCheck2,
+  ChevronRight,
+  FileSearch,
   Files,
-  Layers2,
+  Folders,
+  GitCompareArrows,
+  LayoutDashboard,
+  Library,
   LoaderCircle,
   MessageCircle,
-  Orbit,
+  NotebookPen,
+  PanelLeftClose,
+  PanelLeftOpen,
   RefreshCw,
-  ScanLine,
+  Scale,
   Settings2,
-  Sunset,
-  Telescope,
-  Lightbulb,
   X,
 } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { errorMessage, loadWorkspace, mutate } from "./api";
 import { Workspace } from "./context";
-import type { Page, Snapshot } from "./types";
+import type { ChangePlan, ChatSelection, NativeError, Page, Snapshot } from "./types";
 import { Button } from "./components";
+import { NavigationButton } from "./navigation-button";
+import { Notifications } from "./notifications";
+import { getSettingsSection, settingsSections } from "./settings-sections";
 import {
-  HomePage,
   AnalysisPage,
-  LearningPage,
   ReportsPage,
 } from "./pages/insights";
+import { HomePage } from "./pages/home";
+import { LearningPage } from "./pages/learning";
 import { ProjectsPage, DocumentsPage } from "./pages/projects";
 import { ChangesPage } from "./pages/changes";
+import { RulesPage } from "./pages/rules";
 import {
   ResearchPage,
   WorkPage,
@@ -36,20 +45,24 @@ import {
 } from "./pages/operations";
 
 const navigation = [
-  ["home", Orbit, "요약"],
-  ["analysis", ScanLine, "사용 분석"],
-  ["research", Telescope, "조사"],
-  ["learn", Lightbulb, "학습"],
-  ["projects", Layers2, "프로젝트"],
-  ["work", CalendarCheck2, "작업·일정"],
-  ["docs", Files, "기록·문서"],
+  { label: "내 작업", items: [
+    ["home", LayoutDashboard, "요약"],
+    ["chat", MessageCircle, "대화"],
+    ["work", CalendarCheck2, "작업·일정"],
+    ["reports", NotebookPen, "일간·주간 회고"],
+  ] },
+  { label: "지식 탐색", items: [
+    ["docs", Files, "기록·문서"],
+    ["analysis", FileSearch, "사용 분석"],
+    ["research", Library, "조사"],
+    ["learn", BookMarked, "학습"],
+  ] },
+  { label: "프로젝트 실행", items: [
+    ["projects", Folders, "프로젝트"],
+    ["rules", Scale, "공통·로컬 규칙"],
+    ["change", GitCompareArrows, "변경안 검토"],
+  ] },
 ] as const;
-const secondaryLabels: Partial<Record<Page, string>> = {
-  reports: "일간·주간 회고",
-  settings: "알림·설정",
-  chat: "대화",
-  change: "변경안 검토",
-};
 export default function App() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [page, setPage] = useState<Page>("home");
@@ -58,7 +71,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [notifications, setNotifications] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [document, setDocument] = useState<{
     projectId: string;
     path: string;
@@ -68,8 +81,15 @@ export default function App() {
   const [question, setQuestion] = useState("");
   const [mode, setMode] = useState("chat");
   const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
+  const [chatSelection, setChatSelection] = useState<ChatSelection>({});
+  const [originId, setOriginId] = useState<string | undefined>();
+  const [pendingPlan, setPendingPlan] = useState<ChangePlan | null>(null);
   const request = useRef(0);
   const operations = useRef(0);
+  const workspaceElement = useRef<HTMLElement>(null);
+  const sidebarElement = useRef<HTMLElement>(null);
+  const settingsReturn = useRef<{ page: Page; tab: string }>({ page: "home", tab: "" });
+  const settingsFocus = useRef<"current" | "return" | null>(null);
   const refresh = useCallback(async () => {
     const revision = ++request.current;
     const value = await loadWorkspace();
@@ -114,7 +134,8 @@ export default function App() {
       listen("workspace-changed", () => {
         void refresh().catch((e) => setError(errorMessage(e)));
       }),
-      listen("collection-finished", () => {
+      listen<{ error: NativeError | null }>("collection-finished", ({ payload }) => {
+        if (payload.error) setError(errorMessage(payload.error));
         void refresh().catch((e) => setError(errorMessage(e)));
       }),
       listen<{ stage: string; path: string }>("document-progress", (e) =>
@@ -133,27 +154,42 @@ export default function App() {
       snapshot?.workspace.settings.theme ?? "system";
   }, [snapshot?.workspace.settings.theme]);
   useEffect(() => {
+    if (workspaceElement.current) workspaceElement.current.scrollTop = 0;
+    setChatSelection({});
     setDocument((previous) =>
       previous?.projectId === projectId ? previous : null,
     );
   }, [projectId]);
+  useEffect(() => {
+    const destination = settingsFocus.current;
+    if (!destination) return;
+    settingsFocus.current = null;
+    const selector = destination === "current" ? '.settings-navigation [aria-current="page"]' : ".sidebar-bottom button";
+    sidebarElement.current?.querySelector<HTMLButtonElement>(selector)?.focus();
+  }, [page]);
+
   function navigate(next: Page, sub = "") {
+    if (next === "settings" && page !== "settings") {
+      settingsReturn.current = { page, tab };
+      settingsFocus.current = "current";
+    }
+    if (workspaceElement.current) workspaceElement.current.scrollTop = 0;
     setPage(next);
     setTab(sub);
     setError("");
     setMessage("");
-    setNotifications(false);
   }
-  function ask(text: string, nextMode = "chat", ids: string[] = []) {
+  function ask(text: string, nextMode = "chat", ids: string[] = [], selection: ChatSelection = {}, origin?: string) {
     setQuestion(text);
     setMode(nextMode);
     setEvidenceIds(ids);
+    setChatSelection(selection);
+    setOriginId(origin);
     navigate("chat");
   }
-  const pageName =
-    navigation.find((n) => n[0] === page)?.[2] ??
-    secondaryLabels[page] ??
-    "요약";
+  const section = navigation.find((group) => group.items.some(([id]) => id === page));
+  const pageName = section?.items.find(([id]) => id === page)?.[2] ?? "설정";
+  const activeSettings = getSettingsSection(tab).id;
   const context = snapshot
     ? {
         snapshot,
@@ -165,16 +201,25 @@ export default function App() {
         busy,
         navigate,
         ask,
+        chatSelection,
         refresh,
         perform,
         openDocument: (id: string, path: string, revision: string, fragment?: string) => {
           setDocument({ projectId: id, path, revision, fragment });
           navigate("docs", "reader");
         },
+        pendingPlan,
+        reviewPlan: (plan: ChangePlan) => {
+          setPendingPlan(plan);
+          setProjectId(plan.projectId);
+          navigate("change");
+        },
+        clearPendingPlan: () => setPendingPlan(null),
       }
     : null;
   return (
-    <div className="app-shell">
+    <div className={`app-shell${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
+      <a className="skip-link" href="#workspace-content">본문으로 이동</a>
       <header className="titlebar">
         <div className="app-brand">
           <img
@@ -186,154 +231,83 @@ export default function App() {
           />
           <span className="brand-name">SiloLink</span>
         </div>
-        <div className="titlebar-meta">
-          <span className="titlebar-caption">개인 작업 공간</span>
-          <span className="native-label">
-            {busy ? (
-              <>
-                <LoaderCircle className="spin" />
-                작업 중
-              </>
+        <div className="contextbar">
+          <nav className="context-location" aria-label="현재 위치">
+            {section && <><Button quiet onClick={() => navigate(section.items[0][0])}>{section.label}</Button><ChevronRight aria-hidden="true" /></>}
+            {page === "docs" && tab === "reader" && document ? <>
+              <Button quiet onClick={() => navigate("docs")}>기록·문서</Button><ChevronRight /><strong aria-current="page">{document.path}</strong>
+            </> : <strong aria-current="page">{pageName}</strong>}
+          </nav>
+          <div className="context-actions">
+            {snapshot && snapshot.workspace.projects.length > 0 ? (
+              <select
+                id="project-scope"
+                aria-label="현재 프로젝트"
+                disabled={busy}
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+              >
+                {snapshot.workspace.projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
             ) : (
-              "내 프로젝트, 이어지는 지식"
+              <span className="project-placeholder">{snapshot ? "연결된 프로젝트 없음" : "불러오는 중…"}</span>
             )}
-          </span>
+            {busy && <span role="status" aria-label="작업 중"><LoaderCircle className="spin" /></span>}
+            <Notifications notices={snapshot?.workspace.notices ?? []} page={page} busy={busy}
+              onRead={() => void perform(() => mutate({ operation: "readNotices" }))} navigate={navigate} />
+            <Button quiet aria-label="새로고침" title="새로고침" disabled={busy} onClick={() => void perform(refresh)}><RefreshCw /></Button>
+          </div>
         </div>
       </header>
       <div className="app-body">
-        <aside className="sidebar">
-          <div className="personal">
-            <span className="avatar">나</span>
-            <span>나의 작업 공간</span>
+        <aside className="sidebar" id="app-navigation" ref={sidebarElement}>
+          <div className="sidebar-controls">
+            {!sidebarCollapsed && <span>{page === "settings" ? "설정" : "메뉴"}</span>}
+            <Button className="button quiet sidebar-toggle" aria-label={sidebarCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
+              title={sidebarCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
+              aria-expanded={!sidebarCollapsed} aria-controls="app-navigation"
+              onClick={() => setSidebarCollapsed((value) => !value)}>
+              {sidebarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+            </Button>
           </div>
-          <nav aria-label="주요 탐색">
-            {navigation.map(([id, Icon, label]) => (
-              <button
-                type="button"
-                key={id}
-                aria-current={page === id ? "page" : undefined}
-                onClick={() => navigate(id)}
-              >
-                <Icon size={18} />
-                <span>{label}</span>
-              </button>
-            ))}
-          </nav>
-          <div className="sidebar-bottom">
-            <button type="button" onClick={() => navigate("reports")}>
-              <Sunset size={17} />
-              일간·주간 회고
-            </button>
-            <button type="button" onClick={() => navigate("settings")}>
-              <Settings2 size={17} />
-              알림·설정
-            </button>
-            <p>
-              {snapshot?.workspace.settings.backgroundEnabled
-                ? "백그라운드 안내 사용 중"
-                : "백그라운드 안내 꺼짐"}
-            </p>
-          </div>
-        </aside>
-        <main className="workspace">
-          <div className="contextbar">
-            <div className="inline">
-              <span>내 공간</span>
-              <span>/</span>
-              <strong>{pageName}</strong>
+          {page === "settings" && <div className="settings-back">
+            <NavigationButton label="작업 공간으로" icon={<ArrowLeft />} compact={sidebarCollapsed}
+              onClick={() => {
+                settingsFocus.current = "return";
+                navigate(settingsReturn.current.page, settingsReturn.current.tab);
+              }} />
+          </div>}
+          {page === "settings" ? <nav className="settings-navigation" aria-label="설정 분류">
+            <div className="nav-group">
+              {settingsSections.map(({ id, label, icon: Icon }) => <NavigationButton key={id}
+                label={label} icon={<Icon />} compact={sidebarCollapsed}
+                aria-current={activeSettings === id ? "page" : undefined}
+                onClick={() => navigate("settings", id)} />)}
             </div>
-            <div className="inline">
-              {snapshot && snapshot.workspace.projects.length > 0 && (
-                <select
-                  aria-label="현재 프로젝트"
-                  disabled={busy}
-                  value={projectId}
-                  onChange={(e) => setProjectId(e.target.value)}
-                >
-                  {snapshot.workspace.projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <Button quiet aria-label="새 대화" onClick={() => ask("")}>
-                <MessageCircle />
-              </Button>
-              <Button
-                quiet
-                aria-label="알림"
-                aria-expanded={notifications}
-                onClick={() => setNotifications((v) => !v)}
-              >
-                <Bell />
-                {snapshot &&
-                  snapshot.workspace.notices.filter((n) => !n.read).length >
-                    0 && (
-                    <span className="notification-count">
-                      {snapshot.workspace.notices.filter((n) => !n.read).length}
-                    </span>
-                  )}
-              </Button>
-              <Button
-                quiet
-                aria-label="새로고침"
-                disabled={busy}
-                onClick={() => void perform(refresh)}
-              >
-                <RefreshCw />
-              </Button>
-            </div>
-          </div>
-          {notifications && (
-            <aside className="notifications">
-              <div className="section-heading">
-                <h3>발견과 돌아보기</h3>
-                <Button
-                  quiet
-                  aria-label="알림 닫기"
-                  onClick={() => setNotifications(false)}
-                >
-                  <X />
-                </Button>
+          </nav> : <nav aria-label="주요 탐색">
+            {navigation.map((group) => (
+              <div className="nav-group" key={group.label}>
+                <p className="nav-group-label">{group.label}</p>
+                {group.items.map(([id, Icon, label]) => (
+                  <NavigationButton
+                    key={id}
+                    label={label}
+                    icon={<Icon size={18} />}
+                    compact={sidebarCollapsed}
+                    aria-current={page === id ? "page" : undefined}
+                    onClick={() => navigate(id)}
+                  />
+                ))}
               </div>
-              {snapshot?.workspace.notices.length ? (
-                snapshot.workspace.notices
-                  .slice()
-                  .reverse()
-                  .slice(0, 20)
-                  .map((n) => (
-                    <button
-                      type="button"
-                      className="notification-item"
-                      key={n.id}
-                      onClick={() =>
-                        navigate(
-                          n.kind === "pattern" ? "analysis" : "reports",
-                          n.kind,
-                        )
-                      }
-                    >
-                      <span>{n.title}</span>
-                      <small>{n.read ? "읽음" : "새 알림"}</small>
-                    </button>
-                  ))
-              ) : (
-                <p className="muted">
-                  아직 알림이 없습니다. 설정에서 백그라운드 안내와 마감 시각을
-                  확인하세요.
-                </p>
-              )}
-              <Button
-                quiet
-                onClick={() =>
-                  void perform(() => mutate({ operation: "readNotices" }))
-                }
-              >
-                모두 읽음
-              </Button>
-            </aside>
-          )}
+            ))}
+          </nav>}
+          {page !== "settings" && <div className="sidebar-bottom">
+            <NavigationButton label="설정" icon={<Settings2 size={17} />} compact onClick={() => navigate("settings")} />
+          </div>}
+        </aside>
+        <main className="workspace" ref={workspaceElement}>
           {!!snapshot?.projectConnectionErrors?.length && (
             <div role="alert" className="error-banner">
               <div>
@@ -378,7 +352,7 @@ export default function App() {
             </div>
           ) : (
             <Workspace value={context}>
-              <div className="page">
+              <div className="page" id="workspace-content" tabIndex={-1} key={page}>
                 {page === "home" ? (
                   <HomePage />
                 ) : page === "analysis" ? (
@@ -399,6 +373,8 @@ export default function App() {
                   <SettingsPage />
                 ) : page === "change" ? (
                   <ChangesPage />
+                ) : page === "rules" ? (
+                  <RulesPage />
                 ) : (
                   <ChatPage
                     question={question}
@@ -406,6 +382,7 @@ export default function App() {
                     mode={mode}
                     setMode={setMode}
                     evidenceIds={evidenceIds}
+                    originId={originId}
                   />
                 )}
               </div>
@@ -413,13 +390,6 @@ export default function App() {
           )}
         </main>
       </div>
-      <footer className="app-footer">
-        <span>원문 · 근거 · 나의 다음 행동</span>
-        <span>
-          {snapshot?.workspace.projects.length ?? 0}개 프로젝트 ·{" "}
-          {snapshot?.records.length ?? 0}개 기록
-        </span>
-      </footer>
     </div>
   );
 }

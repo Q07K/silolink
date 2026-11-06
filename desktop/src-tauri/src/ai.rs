@@ -31,6 +31,8 @@ pub struct Request {
     pub source_ids: Vec<String>,
     #[serde(default)]
     pub previous_chat_id: Option<String>,
+    #[serde(default)]
+    pub task_ids: Vec<String>,
 }
 pub fn prepare(
     runtime: &Runtime,
@@ -40,9 +42,10 @@ pub fn prepare(
         || request.record_ids.len() > 100
         || request.documents.len() > 20
         || request.source_ids.len() > 100
+        || request.task_ids.len() > 100
         || !matches!(
             request.mode.as_str(),
-            "chat" | "analysis" | "research" | "learning" | "planning"
+            "chat" | "analysis" | "research" | "learning" | "planning" | "rule"
         )
     {
         return Err(error(
@@ -57,8 +60,8 @@ pub fn prepare(
         let p = repo.project(id)?;
         context.push_str(&format!("\nProject: {}\n", p.metadata["name"]));
         if !request.record_ids.is_empty() {
-            let state = repo.state_directory()?;
-            let report = silolink::sync::read(&p, &state, "all")?;
+            let state = runtime.state_directory(&repo.data.settings);
+            let report = silolink::sync::read(&p, state, "all")?;
             if let Some(records) = report["records"].as_array() {
                 for r in records {
                     if r["id"]
@@ -93,6 +96,25 @@ pub fn prepare(
             read["text"].as_str().unwrap_or("")
         ));
     }
+    for id in &request.task_ids {
+        let task = repo
+            .data
+            .tasks
+            .iter()
+            .find(|task| &task.id == id && request.project_ids.contains(&task.project_id))
+            .ok_or_else(|| {
+                error(
+                    "INVALID_AI_CONTEXT",
+                    "A selected task is missing or outside the selected projects.",
+                )
+            })?;
+        let project = repo.project(&task.project_id)?;
+        context.push_str(&format!(
+            "\n[task / project {}]\n{}\n",
+            project.metadata["name"],
+            serde_json::to_string(task).expect("task JSON")
+        ));
+    }
     for source in &repo.data.sources {
         if request.source_ids.contains(&source.id)
             && request.project_ids.contains(&source.project_id)
@@ -107,6 +129,12 @@ pub fn prepare(
                 source.conditions,
                 source.version
             ));
+            if let Some(fetched) = &source.fetched {
+                context.push_str(&format!(
+                    "\n[fetched original {} / {}]\n{}\n",
+                    fetched.url, fetched.fetched_at, fetched.text
+                ));
+            }
         }
     }
     if let Some(previous) = &request.previous_chat_id {
@@ -174,7 +202,7 @@ pub fn start(app: AppHandle, runtime: Arc<Runtime>, request: Request) -> Result<
     });
     Ok(id)
 }
-async fn generate(provider: &str, root: &Path, prompt: &str) -> Result<String> {
+pub(crate) async fn generate(provider: &str, root: &Path, prompt: &str) -> Result<String> {
     let program = match provider {
         "codex" => std::env::var_os("SILOLINK_CODEX_EXECUTABLE").unwrap_or_else(|| "codex".into()),
         "claude" => {
@@ -326,5 +354,28 @@ mod tests {
         assert!(parse_output("claude", br#"{"result":"failure","is_error":true}"#).is_err());
         assert_eq!(parse_output("codex",b"{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"result\"}}\n").unwrap(),"result");
         assert!(parse_output("codex", b"{\"type\":\"turn.failed\"}").is_err());
+    }
+    #[test]
+    fn planning_reads_selected_persisted_tasks_and_rejects_foreign_scope() {
+        let profile = tempfile::TempDir::new().unwrap();
+        let first = tempfile::TempDir::new().unwrap();
+        let second = tempfile::TempDir::new().unwrap();
+        let runtime = Runtime::open(profile.path(), profile.path().join("Data")).unwrap();
+        let (a, b, task) = {
+            let mut repo = lock(&runtime.repository).unwrap();
+            let a = repo.connect(first.path(), true).unwrap();
+            let b = repo.connect(second.path(), true).unwrap();
+            let task = repo.add_task(&b, "prior-client-task", "review").unwrap();
+            (a, b, task)
+        };
+        let mut request: Request = serde_json::from_value(json!({"projectId":a,"provider":"codex","question":"plan","projectIds":[a,b],"recordIds":[],"documents":[],"mode":"planning","taskIds":[task]})).unwrap();
+        let (_, _, prompt) = prepare(&runtime, &request).unwrap();
+        assert!(prompt.contains("prior-client-task") && prompt.contains(&task));
+        request.project_ids = vec![a];
+        assert_eq!(
+            prepare(&runtime, &request).unwrap_err().code,
+            "INVALID_AI_CONTEXT"
+        );
+        assert_eq!(lock(&runtime.repository).unwrap().data.chats.len(), 1);
     }
 }

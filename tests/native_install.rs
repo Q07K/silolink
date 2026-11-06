@@ -156,7 +156,7 @@ fn setup_installs_separate_discoverable_entries_for_each_project_operation() {
         for name in ENTRY_SKILLS {
             let directory = home.path().join(parent).join(name);
             let text = fs::read_to_string(directory.join("SKILL.md")).unwrap();
-            assert!(text.contains(&format!("name: {name}\n")));
+            assert!(text.lines().any(|line| line == format!("name: {name}")));
             assert!(text.contains("../silolink/SKILL.md"));
             let interface = fs::read_to_string(directory.join("agents/openai.yaml")).unwrap();
             assert!(interface.contains(&format!("${name}")));

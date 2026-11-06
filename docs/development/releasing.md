@@ -11,7 +11,7 @@
 - `desktop/package.json`의 버전과 `package-lock.json` 반영
 - `integrations/plugins/silolink/plugin.json`의 플러그인 버전
 
-현재 소스 버전은 0.1.0이다. 변경을 저장소에 반영한 뒤 같은 커밋에 `v0.1.0` 같은 태그를 만들어 원격에 푸시하면 배포가 시작된다. `v0.1.1`을 배포하려면 먼저 소스 버전을 0.1.1로 올린다. 태그 생성·푸시는 워크플로 추가에 자동으로 포함되지 않는다.
+현재 소스 버전은 0.2.0이다. 변경을 저장소에 반영한 뒤 같은 커밋에 `v0.2.0` 같은 태그를 만들어 원격에 푸시하면 배포가 시작된다. `v0.2.1`을 배포하려면 먼저 소스 버전을 0.2.1로 올린다. 태그 생성·푸시는 워크플로 추가에 자동으로 포함되지 않는다.
 
 저장소에서 Actions 실행이 허용되어야 하며 게시 job의 `contents: write` 권한을 조직 정책이 허용해야 한다. 별도 개인 토큰 없이 해당 저장소의 `GITHUB_TOKEN`을 사용한다. PR 검증 job은 읽기 권한만 가지며 `pull_request_target`은 사용하지 않는다.
 
@@ -55,12 +55,12 @@
 ## 로컬 검증
 
 ```powershell
-.\scripts\release-version.ps1 -Tag v0.1.0
+.\scripts\release-version.ps1 -Tag v0.2.0
 .\scripts\prepare-desktop.ps1 -Profile debug
 .\scripts\cargo.ps1 -CargoArguments @('test', '--all-targets', '--locked')
 .\scripts\cargo.ps1 -CargoArguments @('test', '-p', 'silolink-desktop', '--lib', '--locked')
 .\scripts\desktop.ps1 -Mode build
-.\scripts\package-release.ps1 -OutputDirectory .tools\release-assets -Tag v0.1.0
+.\scripts\package-release.ps1 -OutputDirectory .tools\release-assets -Tag v0.2.0
 ```
 
 출력 폴더는 새 경로를 사용한다. 기존 출력은 덮어쓰지 않는다. `package-release.ps1`은 설치 프로그램 1개와 빌드된 CLI·동봉 CLI의 동일성을 확인한 뒤 패키지를 만든다. UI 테스트·정적 검사·WebView2 검증의 전체 명령은 워크플로에 있다.
