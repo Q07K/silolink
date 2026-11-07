@@ -36,8 +36,10 @@ try {
     $desktopExitCode = $LASTEXITCODE
 } finally {
     Pop-Location
+    # PowerShell passes $null to .NET as '', which pwsh 7 keeps as an empty variable (e.g. RUSTC='').
     foreach ($name in $savedEnvironment.Keys) {
-        [Environment]::SetEnvironmentVariable($name, $savedEnvironment[$name], 'Process')
+        if ($null -eq $savedEnvironment[$name]) { Remove-Item -LiteralPath "Env:$name" -ErrorAction SilentlyContinue }
+        else { Set-Item -LiteralPath "Env:$name" -Value $savedEnvironment[$name] }
     }
 }
 exit $desktopExitCode
