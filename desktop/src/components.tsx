@@ -1,27 +1,42 @@
-import { ChevronDown, ChevronRight, FolderPlus, Inbox, MessageCircle } from "lucide-react";
+import {
+  ChevronDown, ChevronRight, CircleAlert, CircleCheck, FolderPlus, Inbox, Info, LoaderCircle, MessageCircle, TriangleAlert, X,
+} from "lucide-react";
 import type { ReactNode, ComponentPropsWithRef, Ref } from "react";
-import { useEffect, useId, useRef } from "react";
+import { cloneElement, isValidElement, useEffect, useId, useRef } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
 import { native } from "./api";
 import { useWorkspace } from "./context";
 
+export type Tone = "accent" | "success" | "warning" | "danger";
+
 export function Button({
   children,
   primary,
   quiet,
+  danger,
+  loading,
+  disabled,
   ...props
 }: ComponentPropsWithRef<"button"> & {
   primary?: boolean;
   quiet?: boolean;
+  /** Destructive action. Combine with `primary` for a filled danger button. */
+  danger?: boolean;
+  /** Shows a spinner, sets aria-busy and blocks repeated clicks. */
+  loading?: boolean;
 }) {
+  const variant = primary ? "button primary" : quiet ? "button quiet" : "button";
   return (
     <button
       type="button"
-      className={primary ? "button primary" : quiet ? "button quiet" : "button"}
+      className={danger ? `${variant} danger` : variant}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       {...props}
     >
+      {loading && <LoaderCircle className="spin" aria-hidden="true" />}
       {children}
     </button>
   );
@@ -33,7 +48,7 @@ export function Badge({
 }: {
   children: ReactNode;
   accent?: boolean;
-  tone?: "success";
+  tone?: Tone;
 }) {
   const variant = tone ?? (accent ? "accent" : "");
   return <span className={variant ? `badge ${variant}` : "badge"}>{children}</span>;
@@ -60,8 +75,31 @@ export function Heading({
 export function Actions({ children }: { children: ReactNode }) {
   return <div className="form-actions">{children}</div>;
 }
-export function Field({ label, children }: { label: string; children: ReactNode }) {
-  return <label className="form-field"><span>{label}</span>{children}</label>;
+export function Field({ label, children, hint, error }: {
+  label: string;
+  children: ReactNode;
+  /** Helper text under the control. Linked with aria-describedby, not part of the label. */
+  hint?: ReactNode;
+  /** Validation message. Marks the control aria-invalid. */
+  error?: ReactNode;
+}) {
+  const id = useId();
+  if ((!hint && !error) || !isValidElement<Record<string, unknown>>(children))
+    return <label className="form-field"><span>{label}</span>{children}</label>;
+  const controlId = (children.props.id as string | undefined) ?? `${id}-control`;
+  const described = [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(" ");
+  return (
+    <div className="form-field">
+      <label htmlFor={controlId}>{label}</label>
+      {cloneElement(children, {
+        id: controlId,
+        "aria-describedby": described,
+        "aria-invalid": error ? true : undefined,
+      })}
+      {hint && <p className="form-hint" id={`${id}-hint`}>{hint}</p>}
+      {error && <p className="form-error" id={`${id}-error`}>{error}</p>}
+    </div>
+  );
 }
 
 export function DisclosureRow({ title, meta, status, expanded, onToggle, buttonRef, children }: {
@@ -154,6 +192,86 @@ export function Empty({
       <p>{children}</p>
       {action && <Actions>{action}</Actions>}
     </section>
+  );
+}
+const toastIcons = { accent: Info, success: CircleCheck, warning: TriangleAlert, danger: CircleAlert };
+
+/** Stack for toasts, fixed to the lower right of the window. */
+export function ToastRegion({ children }: { children: ReactNode }) {
+  return <div className="toast-region">{children}</div>;
+}
+export function Toast({ title, children, tone = "accent", action, onClose, duration }: {
+  title: string;
+  children?: ReactNode;
+  tone?: Tone;
+  action?: ReactNode;
+  onClose?: () => void;
+  /** Milliseconds before onClose runs. Leave out for messages the user must read. */
+  duration?: number;
+}) {
+  const close = useRef(onClose);
+  close.current = onClose;
+  useEffect(() => {
+    if (!duration) return;
+    const timer = window.setTimeout(() => close.current?.(), duration);
+    return () => window.clearTimeout(timer);
+  }, [duration]);
+  const Icon = toastIcons[tone];
+  return (
+    <div className={`toast ${tone}`} role={tone === "danger" ? "alert" : "status"}>
+      <Icon className="toast-icon" aria-hidden="true" />
+      <div className="toast-body">
+        <strong>{title}</strong>
+        {children && <p>{children}</p>}
+      </div>
+      {action}
+      {onClose && <Button quiet aria-label="알림 닫기" onClick={onClose}><X aria-hidden="true" /></Button>}
+    </div>
+  );
+}
+/** Modal dialog on the native top layer: focus stays inside, Escape and the backdrop close it. */
+export function Dialog({ open, title, description, onClose, children, actions }: {
+  open: boolean;
+  title: string;
+  description?: ReactNode;
+  onClose: () => void;
+  children?: ReactNode;
+  actions?: ReactNode;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const id = useId();
+  useEffect(() => {
+    const element = dialog.current;
+    if (!open || !element) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (typeof element.showModal === "function") element.showModal();
+    else element.setAttribute("open", "");
+    return () => {
+      if (typeof element.close === "function") element.close();
+      opener?.focus();
+    };
+  }, [open]);
+  if (!open) return null;
+  return (
+    <dialog ref={dialog} className="dialog" aria-labelledby={`${id}-title`}
+      aria-describedby={description ? `${id}-description` : undefined}
+      onCancel={(event) => event.preventDefault()}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        onClose();
+      }}
+      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="dialog-panel">
+        <header className="dialog-header">
+          <h2 id={`${id}-title`}>{title}</h2>
+          <Button quiet aria-label="대화상자 닫기" onClick={onClose}><X aria-hidden="true" /></Button>
+        </header>
+        {description && <p className="dialog-description" id={`${id}-description`}>{description}</p>}
+        {children && <div className="dialog-content">{children}</div>}
+        {actions && <Actions>{actions}</Actions>}
+      </div>
+    </dialog>
   );
 }
 export function NoProject() {

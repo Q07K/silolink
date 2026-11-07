@@ -6,10 +6,13 @@ import { NavigationButton } from "../navigation-button";
 import { settingsSections } from "../settings-sections";
 import IconInventory from "./IconInventory";
 import IconAlternatives from "./IconAlternatives";
+import { StateCatalog, TokenCatalog } from "./Catalog";
 
 const systemTabs: [string, string][] = [
   ["foundations", "기본 기준"],
   ["controls", "공통 요소"],
+  ["states", "상태"],
+  ["tokens", "토큰"],
   ["patterns", "화면 패턴"],
   ["review", "UX 검토"],
   ["icons", "아이콘"],
@@ -19,7 +22,7 @@ const systemTabs: [string, string][] = [
 const palette = [
   ["바탕", "--background"], ["패널", "--surface"], ["사이드바", "--sidebar"], ["구분선", "--border"], ["입력·버튼 경계", "--control-border"],
   ["본문", "--text"], ["보조 정보", "--muted"], ["주요 행동", "--accent"], ["선택 배경", "--accent-soft"],
-  ["성공", "--success"], ["오류", "--danger"],
+  ["성공", "--success"], ["주의", "--warning"], ["오류", "--danger"],
 ];
 const typeRoles = [
   ["화면 제목", "--font-page", "--line-heading", "--weight-semibold", "전체 프로젝트"],
@@ -85,7 +88,7 @@ function Foundations() {
       <div className="system-columns">
         <div className="system-section">
           <div className="inline"><Badge tone="success">연결됨</Badge><Badge>연결 대기</Badge></div>
-          <p>연결 여부는 배지 문구로 구분합니다. 선택된 메뉴에는 왼쪽 표시선이, 선택된 탭에는 밑줄이 나타납니다.</p>
+          <p>연결 여부는 배지 문구로 구분합니다. 선택된 메뉴는 강조 배경과 굵은 글자로, 선택된 탭은 밑줄로 나타납니다.</p>
           <div><Button disabled aria-describedby="system-disabled-reason">저장</Button></div>
           <p className="muted" id="system-disabled-reason">저장하려면 문서 이름을 입력하세요.</p>
         </div>
@@ -109,9 +112,11 @@ function Controls() {
         <div><span className="micro">주요</span><Button primary onClick={() => setFeedback("주요 버튼을 눌렀습니다.")}>저장</Button></div>
         <div><span className="micro">보조</span><Button onClick={() => setFeedback("보조 버튼을 눌렀습니다.")}>취소</Button></div>
         <div><span className="micro">가벼운 탐색</span><Button quiet onClick={() => setFeedback("탐색 버튼을 눌렀습니다.")}>전체 보기</Button></div>
+        <div><span className="micro">위험</span><Button danger onClick={() => setFeedback("위험 버튼을 눌렀습니다.")}>삭제</Button></div>
+        <div><span className="micro">처리 중</span><Button primary loading>저장</Button></div>
         <div><span className="micro">사용할 수 없음</span><Button primary disabled>저장</Button></div>
       </div>
-      <div className="inline"><Badge tone="success">연결됨</Badge><Badge>원문 확인 필요</Badge><Badge>예시 데이터</Badge></div>
+      <div className="inline"><Badge tone="success">연결됨</Badge><Badge tone="warning">원문 확인 필요</Badge><Badge>예시 데이터</Badge></div>
       <p className="muted">배지는 대상의 상태를 설명합니다. 목록을 여는 동작은 행의 펼침 표시로, 설정처럼 화면을 바꾸는 동작은 이름이 있는 버튼으로 표현합니다.</p>
       {feedback && <p className="micro" role="status">{feedback}</p>}
     </section>
@@ -320,10 +325,12 @@ export default function DesignSystem() {
       <div className="inline"><a href="/design.html">앱 미리보기</a><label className="inline">테마 <select value={theme} onChange={(event) => setTheme(event.target.value)}><option value="light">밝게</option><option value="dark">어둡게</option></select></label></div>
     </header>
     <main className="page system-page">
-      <Heading title="디자인 시스템" sub="SiloLink 데스크톱의 기준을 검토합니다. 실제 앱과 같은 글꼴, 색, 버튼, 입력, 탭을 사용합니다." />
+      <Heading title="디자인 시스템" sub="SiloLink 데스크톱의 기준을 검토합니다. 실제 앱과 같은 토큰과 공통 컴포넌트를 쓰며, 상태·토큰 탭은 밝게/어둡게를 나란히 보여 줍니다." />
       <TabSet items={systemTabs} label="디자인 시스템 분류" value={tab} onChange={setTab}>
         {tab === "foundations" && <Foundations />}
         {tab === "controls" && <Controls />}
+        {tab === "states" && <StateCatalog />}
+        {tab === "tokens" && <TokenCatalog />}
         {tab === "patterns" && <Patterns />}
         {tab === "review" && <ReviewChecklist />}
         {tab === "icons" && <IconInventory />}

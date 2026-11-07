@@ -1,10 +1,12 @@
 :root {
   color-scheme: light dark;
+  /* Brand palette: raw values. Components use the semantic roles below. */
   --brand-700: #0349c7;
   --brand-600: #0058ed;
   --brand-400: #218bf5;
   --brand-200: #9dccff;
   --brand-50: #eaf2ff;
+  /* Surfaces and text */
   --background: light-dark(#f7f8fc, #11151d);
   --surface: light-dark(#ffffff, #1b2230);
   --text: light-dark(#202b40, #edf2fa);
@@ -12,20 +14,57 @@
   --border: light-dark(#e5e9f2, #303b4d);
   --control-border: light-dark(#7d899e, #6b7b92);
   --soft: light-dark(#f0f3f9, #252f40);
+  --pressed: light-dark(#e3e8f2, #2e3a4e);
+  /* Fields are a soft fill with a 3:1 boundary; focus returns them to the surface. */
+  --field: light-dark(#f4f6fb, #151b26);
+  --field-hover: light-dark(#edf1f8, #18202d);
+  --field-border: var(--control-border);
+  /* Accent (primary action, selection, links) */
   --accent: light-dark(var(--brand-600), var(--brand-200));
+  --accent-hover: light-dark(var(--brand-700), #bcdcff);
+  --accent-pressed: light-dark(#0a3a9e, #d6e9ff);
   --accent-soft: light-dark(var(--brand-50), #233a5a);
   --on-accent: light-dark(#ffffff, #122641);
+  /* Status: foreground for text and borders, soft for tinted backgrounds. */
   --danger: light-dark(#b22e3e, #ffa5ad);
+  --danger-hover: light-dark(#962232, #ffc3c8);
+  --danger-soft: light-dark(#fdecee, #3d2228);
+  --on-danger: light-dark(#ffffff, #3a1016);
   --success: light-dark(#21684d, #92d2b3);
+  --success-soft: light-dark(#e6f4ee, #1d3a30);
+  --warning: light-dark(#8a5a00, #f3c66b);
+  --warning-soft: light-dark(#fff4dc, #3a2f17);
+  /* Focus: accent edge plus a soft glow. Filled controls add a surface gap first. */
+  --focus-glow: color-mix(in srgb, var(--accent) 32%, transparent);
+  --focus-ring: 0 0 0 1px var(--accent), 0 0 0 4px var(--focus-glow);
+  --focus-ring-gap: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent), 0 0 0 7px var(--focus-glow);
+  /* App shell */
   --sidebar: light-dark(#f0f3fa, #171e2b);
   --sidebar-text: light-dark(#202b40, #f0f4ff);
   --sidebar-muted: light-dark(#5f6e86, #aebbd0);
+  --sidebar-hover: light-dark(#e7ecf7, #1f2838);
   --sidebar-selected: light-dark(#e0e9fc, #263b5c);
+  /* Navy feature area keeps one look in both themes. */
   --hero: #192e53;
   --hero-text: #f4f7ff;
   --hero-muted: #bacbe5;
+  --hero-badge: #ffffff14;
+  --hero-badge-text: #c4d9ff;
+  --hero-control: #ffffff0d;
+  --hero-control-hover: #ffffff20;
+  --hero-line: #ffffff30;
+  --hero-action: #f0f5ff;
+  --on-hero-action: #1a3d72;
+  /* Overlays */
+  --overlay-backdrop: light-dark(#10204040, #000000a0);
+  /* Elevation: panels stay flat-ish; overlays lift clearly. */
   --shadow: 0 4px 18px light-dark(#20345906, #00000012);
+  --shadow-panel: var(--shadow);
+  --shadow-raised: 0 2px 8px light-dark(#2034590f, #00000040);
+  --shadow-overlay: 0 12px 40px light-dark(#101b3030, #00000070);
   /* Type roles: use the same role in headers, navigation and content. */
+  --font-sans: "Pretendard Variable", Pretendard, "Segoe UI", "Malgun Gothic", sans-serif;
+  --font-mono: "Cascadia Code", Consolas, monospace;
   --font-caption: 12px;
   --font-body: 14px;
   --font-title: 16px;
@@ -40,7 +79,13 @@
   --weight-medium: 500;
   --weight-semibold: 600;
   --weight-bold: 700;
-  /* Layout spacing uses an 8px grid. */
+  --tracking-page: -1px;
+  --tracking-display: -0.8px;
+  --tracking-brand: -0.6px;
+  --tracking-section: -0.5px;
+  --tracking-label: 0.5px;
+  /* Layout spacing uses an 8px grid; the half step is for inline details only. */
+  --space-half: 4px;
   --space-1: 8px;
   --space-2: 16px;
   --space-3: 24px;
@@ -51,8 +96,12 @@
   --radius-small: 4px;
   --radius-control: 8px;
   --radius-panel: 12px;
+  --radius-pill: 999px;
   --control-height: 40px;
   --tab-height: 44px;
+  --badge-height: 24px;
+  --row-min-height: 56px;
+  --textarea-min-height: 100px;
   --icon-small: 16px;
   --icon-default: 18px;
   --icon-large: 20px;
@@ -61,11 +110,31 @@
   --sidebar-compact: 72px;
   --header-height: 64px;
   --content-max: 1440px;
+  --measure: 490px;
+  --popover-width: 380px;
+  --popover-max-height: 480px;
+  --dialog-width: 480px;
+  --toast-width: 360px;
   --page-gutter: var(--space-4);
   --section-gap: var(--space-3);
   --panel-padding: var(--space-3);
-  font-family:
-    "Pretendard Variable", Pretendard, "Segoe UI", "Malgun Gothic", sans-serif;
+  /* Motion: short, ease-out; reduced motion removes it. */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 260ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --transition-control:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+  /* Stacking */
+  --z-header: 20;
+  --z-popover: 40;
+  --z-toast: 80;
+  --z-tooltip: 100;
+  font-family: var(--font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -74,4 +143,11 @@
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
 }
