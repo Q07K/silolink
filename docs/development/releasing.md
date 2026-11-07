@@ -21,7 +21,7 @@
 - `SiloLink-Codex-Windows-<version>.zip`: 앱에서 직접 스킬을 등록하는 방식 대신 Codex 플러그인으로 관리할 때 사용하는 선택 배포물.
 - `SHA256SUMS.txt`: 두 파일의 SHA-256.
 
-검사·빌드·실제 WebView2 테스트 후 `scripts/package-release.ps1`이 파일을 모은다. 별도 게시 job은 전달받은 파일 개수·체크섬을 확인하고 초안 릴리스에 업로드한 뒤 공개한다. 실패하면 초안 상태로 남을 수 있다. 같은 태그의 초안은 재실행으로 이어갈 수 있고, 이미 공개한 릴리스는 덮어쓰지 않는다. 수정 배포는 새 버전을 만든다. 하이픈이 들어간 버전 태그는 prerelease로 표시한다.
+검사·빌드·설치기·브랜딩 검증 후 `scripts/package-release.ps1`이 파일을 모은다. 실제 WebView2 화면을 조작하는 `desktop/tests/native_smoke.py`는 호스팅 러너에서 WebView2 원격 디버깅 포트가 열리지 않아 워크플로에서 제외했다. 태그를 만들기 전에 아래 로컬 검증에서 실행한다. 별도 게시 job은 전달받은 파일 개수·체크섬을 확인하고 초안 릴리스에 업로드한 뒤 공개한다. 실패하면 초안 상태로 남을 수 있다. 같은 태그의 초안은 재실행으로 이어갈 수 있고, 이미 공개한 릴리스는 덮어쓰지 않는다. 수정 배포는 새 버전을 만든다. 하이픈이 들어간 버전 태그는 prerelease로 표시한다.
 
 일반 빌드 결과는 Actions의 `windows-release` 아티팩트에 14일 보관한다. 공개 Releases 게시와 아티팩트 다운로드는 별도 경로다. 코드 서명·자동 업데이트·macOS 배포는 현재 포함하지 않는다.
 
@@ -60,9 +60,11 @@
 .\scripts\cargo.ps1 -CargoArguments @('test', '--all-targets', '--locked')
 .\scripts\cargo.ps1 -CargoArguments @('test', '-p', 'silolink-desktop', '--lib', '--locked')
 .\scripts\desktop.ps1 -Mode build
+.\scripts\cargo.ps1 -CargoArguments @('build', '-p', 'silolink-desktop', '--bin', 'silolink-desktop-provider-fixture', '--locked')
+python desktop\tests\native_smoke.py --executable target\release\silolink-desktop.exe
 .\scripts\package-release.ps1 -OutputDirectory .tools\release-assets -Tag v0.3.1
 ```
 
-출력 폴더는 새 경로를 사용한다. 기존 출력은 덮어쓰지 않는다. `package-release.ps1`은 설치 프로그램 1개와 빌드된 CLI·동봉 CLI의 동일성을 확인한 뒤 패키지를 만든다. UI 테스트·정적 검사·WebView2 검증의 전체 명령은 워크플로에 있다.
+출력 폴더는 새 경로를 사용한다. 기존 출력은 덮어쓰지 않는다. `package-release.ps1`은 설치 프로그램 1개와 빌드된 CLI·동봉 CLI의 동일성을 확인한 뒤 패키지를 만든다. `native_smoke.py`에는 Python과 `playwright==1.64.1`이 필요하다. 정적 검사·설치기·브랜딩 검증의 전체 명령은 워크플로에 있다.
 
 자료: [Tauri 리소스 동봉](https://v2.tauri.app/develop/resources/), [GitHub Rust 빌드·아티팩트](https://docs.github.com/en/actions/tutorials/build-and-test-code/rust), [GitHub CLI 릴리스 생성](https://cli.github.com/manual/gh_release_create).

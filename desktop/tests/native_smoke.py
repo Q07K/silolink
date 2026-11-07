@@ -76,7 +76,10 @@ def launch(playwright, suffix):
             break
         except OSError:
             if time.monotonic() > deadline:
-                log.flush()
+                # Do not leave the app holding the profile and log files open.
+                process.kill()
+                process.wait()
+                log.close()
                 raise AssertionError(f'WebView2 debugging endpoint {endpoint} did not open within 120s; app log: {(OUT / (suffix+".log")).read_text(errors="replace")}')
             time.sleep(.1)
     browser = playwright.chromium.connect_over_cdp(endpoint)
