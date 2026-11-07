@@ -82,6 +82,7 @@ silolink watch --project "C:\path\to\project" --state-dir "C:\path\to\silolink-s
 | [데스크톱 사용과 개발](docs/development/desktop.md) | 빌드/실행·저장·네이티브 경계·검증·현재 한계 |
 | [데스크톱 디자인](docs/design/desktop.md) | 채택한 시안·제공된 로고·브랜드 컬러·실제 공통 모듈과 요구 반영 |
 | [유사 제품과 개발 가치](docs/research/alternatives.md) | 후보 9종, 비교 근거, 구현 가치와 검증 과제 |
+| [LLM Wiki 계열 오픈소스 조사](docs/research/llm-wiki.md) | Karpathy LLM Wiki 패턴, 세션→위키·위키 앱·스킬·프롬프트 코칭 약 70개 비교, 가져올 설계와 차별화 후보 |
 | [CLI·플러그인 연동 조사](docs/research/cli-integration.md) | 실제 Windows 검증 결과, CLI·MCP 비교, 공급자별 지원·인증 조건과 다음 과제 |
 | [Basic Memory 분석](docs/research/basic-memory.md) | 사람·AI 공동 문서 관리와 실제로 비교할 지점 |
 
@@ -106,6 +107,7 @@ docs/
     prd-v0.1.md
   research/
     alternatives.md
+    llm-wiki.md
     cli-integration.md
     basic-memory.md
 ```

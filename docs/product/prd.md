@@ -413,6 +413,7 @@ Claude의 [공식 제품 제공·인증 조건](https://code.claude.com/docs/en/
 사용자 인터뷰와 후속 정정, 2026-11-08 비전 설명이 요구의 기준이다. 2026-11-01~11-07의 판단 경과는 [PRD v0.1](prd-v0.1.md)의 10절에 보존한다.
 
 - [유사 제품과 개발 가치](../research/alternatives.md): 후보 9종, 기능 중복과 실사용 비교 과제.
+- [LLM Wiki 계열 오픈소스 조사](../research/llm-wiki.md): 세션→위키·위키 앱·스킬·프롬프트 코칭 약 70개. 수집·위키화·근거 관리는 선행 사례가 많고, G1의 개인 용어집·주제별 변화 추적은 확인한 범위에서 비어 있음.
 - [CLI·플러그인 연동 조사](../research/cli-integration.md): 인터페이스·공급자 연결과 기존 확인 범위.
 - [Basic Memory 분석](../research/basic-memory.md): 문맥·판단 상태·문서 관리 부담의 비교 기준.
 - [데스크톱 레퍼런스·PARA 검토](../research/desktop-references-para.md): 화면·정보 운영 비교. PARA는 선택적 분류 방식이며 네 폴더 재구조화를 강제하지 않는다.
