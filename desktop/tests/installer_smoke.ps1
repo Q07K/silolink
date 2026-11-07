@@ -127,6 +127,8 @@ function Build-Fixture([string]$Version) {
     $script = [regex]::Replace($script, '(?s); Copy resources\r?\n.*?; Create file associations', '; Create file associations')
     $script = $script.Replace('$DESKTOP', (Join-Path $testRoot 'desktop')).Replace('$SMPROGRAMS', (Join-Path $testRoot 'start-menu'))
     $script = $script.Replace('$APPDATA', (Join-Path $testRoot 'roaming')).Replace('$LOCALAPPDATA', (Join-Path $testRoot 'local'))
+    # The checks read Korean labels; pin the language so English Windows (e.g. CI runners) shows the same screens.
+    $script = [regex]::Replace($script, '(?m)^Function \.onInit\r?$', ("Function .onInit`r`n" + '  StrCpy $$LANGUAGE $${LANG_KOREAN}'))
     $fixtureScript = Join-Path $testRoot ("setup-$Version.nsi")
     [IO.File]::WriteAllText($fixtureScript, $script, [Text.UTF8Encoding]::new($true))
     Push-Location (Split-Path $sourcePath -Parent)
