@@ -313,7 +313,7 @@ with sync_playwright() as playwright:
         catalog.get_by_role('tab', name='아이콘 대안', exact=True).click()
         comparisons = page.get_by_role('tabpanel', name='아이콘 대안', exact=True)
         expect(comparisons.locator('[data-adopted]')).to_have_count(15)
-        expect(comparisons.get_by_text('왼쪽 선택선과 배경으로 표시합니다.', exact=True)).to_be_visible()
+        expect(comparisons.get_by_text('강조 배경·강조 글자·굵기로 표시합니다.', exact=True)).to_be_visible()
         expect(comparisons.get_by_text('기존 · 유지', exact=True)).to_have_count(2)
         catalog.get_by_role('tab', name='기본 기준', exact=True).click()
         catalog.get_by_role('tab', name='기본 기준', exact=True).focus()
@@ -361,7 +361,7 @@ with sync_playwright() as playwright:
         expect(empty_sample.get_by_text('검토할 첫 자료', exact=True)).to_be_visible()
         for width in [960, 520]:
             page.set_viewport_size({'width': width, 'height': 940})
-            for tab in ['기본 기준', '공통 요소', '화면 패턴', 'UX 검토']:
+            for tab in ['기본 기준', '공통 요소', '상태', '토큰', '화면 패턴', 'UX 검토']:
                 catalog.get_by_role('tab', name=tab, exact=True).click()
                 assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'), (width, tab)
         expect(page.get_by_role('tabpanel', name='UX 검토')).to_contain_text('수치로 확인할 때')

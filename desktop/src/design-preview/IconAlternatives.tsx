@@ -151,7 +151,7 @@ const comparisons: Comparison[] = [
     title: "선택된 메뉴 표시", location: "펼친 사이드바", chosen: null,
     current: [ChevronRight, "ChevronRight", "선택된 메뉴에 하위 화면이 더 있는 것처럼 보입니다."],
     alternatives: [
-      [Dot, "Dot", "작은 점으로 현재 메뉴를 표시합니다. 기존 선택선과 배경만으로도 구분할 수 있습니다."],
+      [Dot, "Dot", "작은 점으로 현재 메뉴를 표시합니다. 강조 배경과 굵은 글자만으로도 구분할 수 있습니다."],
       [CircleDot, "CircleDot", "현재 선택된 항목을 작은 점으로 표시합니다."],
       [Minus, "Minus", "방향성이 없는 짧은 선. 메뉴를 접는 동작으로 읽힐 여지가 있습니다."],
     ],
@@ -178,7 +178,7 @@ export default function IconAlternatives() {
       <div>
         <span className="micro">{location}</span>
         <h2 id={`icon-comparison-${index}`}>{index + 1}. {title}</h2>
-        {chosen === null && <p className="muted">왼쪽 선택선과 배경으로 표시합니다.</p>}
+        {chosen === null && <p className="muted">강조 배경·강조 글자·굵기로 표시합니다.</p>}
       </div>
       <ul className="system-icon-grid system-icon-comparison">
         {[current, ...alternatives].map(([Icon, name, description], option) => <li className="system-icon-tile" key={name} data-adopted={chosen === option || undefined}>
