@@ -75,6 +75,17 @@ jobs:
         run: python -m pip install playwright==1.64.1
       - name: Verify the built desktop app
         run: python desktop/tests/native_smoke.py --executable target/release/silolink-desktop.exe
+      - name: Keep desktop test evidence after a failure
+        if: failure()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: desktop-test-evidence
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            .tools/desktop-smoke/
+            .tools/installer-smoke/
+            .tools/process-branding/
       - name: Assemble release files and checksums
         env:
           RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}

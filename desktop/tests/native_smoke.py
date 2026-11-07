@@ -66,13 +66,18 @@ def launch(playwright, suffix):
     log = (OUT / f'{suffix}.log').open('wb')
     process = subprocess.Popen([str(EXE)], cwd=OUT, env=env, stdout=log, stderr=log, creationflags=subprocess.CREATE_NO_WINDOW)
     endpoint = f'http://127.0.0.1:{port}'
-    for _ in range(150):
+    # A cold WebView2 start on a fresh CI runner can take well over the local few seconds.
+    deadline = time.monotonic() + 120
+    while True:
         if process.poll() is not None:
             raise AssertionError(f'Native application exited ({process.returncode}): {(OUT / (suffix+".log")).read_text(errors="replace")}')
         try:
             urllib.request.urlopen(endpoint + '/json/version', timeout=.5).close()
             break
         except OSError:
+            if time.monotonic() > deadline:
+                log.flush()
+                raise AssertionError(f'WebView2 debugging endpoint {endpoint} did not open within 120s; app log: {(OUT / (suffix+".log")).read_text(errors="replace")}')
             time.sleep(.1)
     browser = playwright.chromium.connect_over_cdp(endpoint)
     pages = browser.contexts[0].pages
