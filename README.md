@@ -76,7 +76,8 @@ silolink watch --project "C:\path\to\project" --state-dir "C:\path\to\silolink-s
 | 문서 | 확인할 내용 |
 | --- | --- |
 | [초기 CLI와 공통 기록 계약](docs/development/cli.md) | 실행 방법, 프로젝트·기록 형식, 페이지·실패·재조회와 현재 한계 |
-| [PRD v0.1](docs/product/prd.md) | 사용자 요구, 범용 지원 원칙, 수용 기준, 첫 구현 범위 제안과 남은 결정 |
+| [PRD v0.2](docs/product/prd.md) | 제품 비전과 핵심 목표, 목표별 우선순위, 요구·수용 기준, 0.3.1 구현 현황, 개발 순서 제안과 남은 결정 |
+| [PRD v0.1 (구버전)](docs/product/prd-v0.1.md) | 2026-11-01~11-07의 요구·결정·판단 경과 기록 |
 | [데스크톱 레퍼런스·PARA 검토](docs/research/desktop-references-para.md) | 실제 서비스 화면·정보 운영 비교, PARA의 효용과 한계, 원본과 분류를 구별하는 적용안 |
 | [데스크톱 사용과 개발](docs/development/desktop.md) | 빌드/실행·저장·네이티브 경계·검증·현재 한계 |
 | [데스크톱 디자인](docs/design/desktop.md) | 채택한 시안·제공된 로고·브랜드 컬러·실제 공통 모듈과 요구 반영 |
@@ -102,6 +103,7 @@ docs/
     desktop.md
   product/
     prd.md
+    prd-v0.1.md
   research/
     alternatives.md
     cli-integration.md
