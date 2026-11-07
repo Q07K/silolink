@@ -32,8 +32,7 @@ pub fn is_rule_document(path: &str) -> bool {
     let lower = path.to_lowercase();
     let name = lower.rsplit('/').next().unwrap_or(&lower);
     RULE_FILES.contains(&name)
-        || (!lower.contains("node_modules")
-            && RULE_WORDS.iter().any(|w| name.contains(w)))
+        || (!lower.contains("node_modules") && RULE_WORDS.iter().any(|w| name.contains(w)))
 }
 
 #[derive(Clone, Serialize)]
@@ -73,7 +72,11 @@ pub fn extract(text: &str) -> Vec<(String, String, usize)> {
             .or_else(|| {
                 let digits = line.find(|c: char| !c.is_ascii_digit())?;
                 (digits > 0)
-                    .then(|| line[digits..].strip_prefix(". ").or_else(|| line[digits..].strip_prefix(") ")))
+                    .then(|| {
+                        line[digits..]
+                            .strip_prefix(". ")
+                            .or_else(|| line[digits..].strip_prefix(") "))
+                    })
                     .flatten()
             });
         let Some(item) = item else {
@@ -113,8 +116,10 @@ pub fn compare(rules: &[RuleLine], projects: &[(String, String)]) -> Value {
     let mut output: Vec<Value> = groups
         .into_iter()
         .map(|group| {
-            let in_projects: BTreeSet<&str> =
-                group.iter().map(|i| rules[*i].project_id.as_str()).collect();
+            let in_projects: BTreeSet<&str> = group
+                .iter()
+                .map(|i| rules[*i].project_id.as_str())
+                .collect();
             let same = group.iter().all(|i| normalized[*i] == normalized[group[0]]);
             let status = if in_projects.len() < 2 {
                 "local"
@@ -237,13 +242,19 @@ mod tests {
         let text = "# 규칙\n- 커밋 메시지는 한국어로 쓴다\n```\n- not a rule\n```\n1. **테스트**를 먼저 작성한다\n- ab\n";
         let rules = extract(text);
         assert_eq!(rules.len(), 2);
-        assert_eq!(rules[1], ("규칙".into(), "테스트를 먼저 작성한다".into(), 6));
+        assert_eq!(
+            rules[1],
+            ("규칙".into(), "테스트를 먼저 작성한다".into(), 6)
+        );
         assert!(is_rule_document("AGENTS.md") && is_rule_document("docs/코딩-규칙.md"));
         assert!(!is_rule_document("README.md"));
     }
     #[test]
     fn separates_shared_variant_and_local_rules() {
-        let projects = vec![("a".to_string(), "A".to_string()), ("b".to_string(), "B".to_string())];
+        let projects = vec![
+            ("a".to_string(), "A".to_string()),
+            ("b".to_string(), "B".to_string()),
+        ];
         let rules = vec![
             line("a", "커밋 메시지는 한국어로 쓴다"),
             line("b", "커밋 메시지는 한국어로 쓴다."),
@@ -252,16 +263,43 @@ mod tests {
             line("a", "디자인 토큰만 사용한다"),
         ];
         let result = compare(&rules, &projects);
-        assert_eq!(result["summary"], json!({"shared":1,"variant":1,"local":1,"rules":5}));
-        let local = result["groups"].as_array().unwrap().iter().find(|g| g["status"] == "local").unwrap();
+        assert_eq!(
+            result["summary"],
+            json!({"shared":1,"variant":1,"local":1,"rules":5})
+        );
+        let local = result["groups"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|g| g["status"] == "local")
+            .unwrap();
         assert_eq!(local["missingProjectIds"], json!(["b"]));
     }
     #[test]
     fn appends_rules_without_rewriting_existing_text() {
-        let plan = append_plan("p", "AGENTS.md", Some(("rev", "# 기존\n- 유지")), "공통 규칙", &["새 규칙".into()], "why").unwrap();
-        assert_eq!(plan["operations"][0]["content"], "# 기존\n- 유지\n\n## 공통 규칙\n\n- 새 규칙\n");
+        let plan = append_plan(
+            "p",
+            "AGENTS.md",
+            Some(("rev", "# 기존\n- 유지")),
+            "공통 규칙",
+            &["새 규칙".into()],
+            "why",
+        )
+        .unwrap();
+        assert_eq!(
+            plan["operations"][0]["content"],
+            "# 기존\n- 유지\n\n## 공통 규칙\n\n- 새 규칙\n"
+        );
         assert_eq!(plan["operations"][0]["expectedRevision"], "rev");
-        let created = append_plan("p", "AGENTS.md", None, "공통 규칙", &["새 규칙".into()], "why").unwrap();
+        let created = append_plan(
+            "p",
+            "AGENTS.md",
+            None,
+            "공통 규칙",
+            &["새 규칙".into()],
+            "why",
+        )
+        .unwrap();
         assert!(created["operations"][0]["expectedRevision"].is_null());
         assert!(append_plan("p", "notes.txt", None, "h", &["r".into()], "why").is_err());
     }

@@ -58,7 +58,10 @@ pub fn project_report(
     generated_at: &str,
     now: i64,
 ) -> String {
-    let mut out = format!("# {} 정리서\n\n생성 {generated_at} · SiloLink\n\n", line(project_name));
+    let mut out = format!(
+        "# {} 정리서\n\n생성 {generated_at} · SiloLink\n\n",
+        line(project_name)
+    );
     out.push_str("## 문서 현황\n\n");
     match inventory {
         Some(report) => {
@@ -98,7 +101,11 @@ pub fn project_report(
         out.push_str(&format!(
             "### {}\n\n{} · {}\n\n{}\n\n",
             line(&d.title),
-            if d.basis == "observed" { "기록에서 확인" } else { "해석·추정" },
+            if d.basis == "observed" {
+                "기록에서 확인"
+            } else {
+                "해석·추정"
+            },
             d.source,
             d.summary
         ));
@@ -106,15 +113,27 @@ pub fn project_report(
             out.push_str(&format!("> 사용자 수정: {}\n\n", line(correction)));
         }
         for e in d.evidence.iter().take(5) {
-            out.push_str(&format!("- 근거 `{}` “{}”\n", &e.record_id[..e.record_id.len().min(10)], e.quote));
+            out.push_str(&format!(
+                "- 근거 `{}` “{}”\n",
+                &e.record_id[..e.record_id.len().min(10)],
+                e.quote
+            ));
         }
         out.push('\n');
     }
     let pending = discoveries.iter().filter(|d| d.status == "new").count();
     if pending > 0 {
-        out.push_str(&format!("검토하지 않은 발견 {pending}개는 포함하지 않았습니다.\n"));
+        out.push_str(&format!(
+            "검토하지 않은 발견 {pending}개는 포함하지 않았습니다.\n"
+        ));
     }
-    for (kind, title) in [("decision", "결정"), ("rule", "규칙"), ("learning", "학습"), ("research", "조사 정리"), ("analysis", "분석 노트")] {
+    for (kind, title) in [
+        ("decision", "결정"),
+        ("rule", "규칙"),
+        ("learning", "학습"),
+        ("research", "조사 정리"),
+        ("analysis", "분석 노트"),
+    ] {
         let notes: Vec<_> = data
             .notes
             .iter()
@@ -125,11 +144,24 @@ pub fn project_report(
         }
         out.push_str(&format!("\n## {title}\n\n"));
         for note in notes {
-            let status = note.status.as_deref().map(|s| format!(" · {s}")).unwrap_or_default();
-            out.push_str(&format!("### {}\n\n{}{status}\n\n{}\n\n", line(&note.title), note.created_at, note.body.trim()));
+            let status = note
+                .status
+                .as_deref()
+                .map(|s| format!(" · {s}"))
+                .unwrap_or_default();
+            out.push_str(&format!(
+                "### {}\n\n{}{status}\n\n{}\n\n",
+                line(&note.title),
+                note.created_at,
+                note.body.trim()
+            ));
         }
     }
-    let sources: Vec<_> = data.sources.iter().filter(|s| s.project_id == project_id).collect();
+    let sources: Vec<_> = data
+        .sources
+        .iter()
+        .filter(|s| s.project_id == project_id)
+        .collect();
     if !sources.is_empty() {
         out.push_str("\n## 조사 근거\n\n");
         for s in sources {
@@ -138,7 +170,11 @@ pub fn project_report(
                 line(&s.title),
                 s.url,
                 s.kind,
-                if s.verified { "원문 확인" } else { "원문 미확인" },
+                if s.verified {
+                    "원문 확인"
+                } else {
+                    "원문 미확인"
+                },
                 s.version,
                 line(&s.claim)
             ));
@@ -147,7 +183,11 @@ pub fn project_report(
             }
         }
     }
-    let tasks: Vec<_> = data.tasks.iter().filter(|t| t.project_id == project_id).collect();
+    let tasks: Vec<_> = data
+        .tasks
+        .iter()
+        .filter(|t| t.project_id == project_id)
+        .collect();
     if !tasks.is_empty() {
         out.push_str("\n## 작업 실적\n\n| 작업 | 단계 | 상태 | 측정 시간 | 예상 |\n| --- | --- | --- | --- | --- |\n");
         for t in tasks {
@@ -160,13 +200,20 @@ pub fn project_report(
             let estimate = t
                 .estimates
                 .last()
-                .and_then(|e| e.median_minutes.map(|m| format!("약 {}", minutes(m as i64 * 60_000))))
+                .and_then(|e| {
+                    e.median_minutes
+                        .map(|m| format!("약 {}", minutes(m as i64 * 60_000)))
+                })
                 .unwrap_or_else(|| "-".into());
             out.push_str(&format!(
                 "| {} | {} | {status} | {} | {estimate} |\n",
                 line(&t.title).replace('|', "\\|"),
                 line(&t.phase).replace('|', "\\|"),
-                if t.spans.is_empty() { "측정 없음".into() } else { minutes(worked) }
+                if t.spans.is_empty() {
+                    "측정 없음".into()
+                } else {
+                    minutes(worked)
+                }
             ));
         }
     }

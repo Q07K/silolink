@@ -37,20 +37,32 @@ pub fn records_for(
 }
 
 /// Merges deterministic discoveries; returns (discovery id, fingerprint, title) for new ones.
-pub fn refresh_local(runtime: &Runtime, records: &[Value], analysis: &Value) -> Result<Vec<(String, String, String)>> {
+pub fn refresh_local(
+    runtime: &Runtime,
+    records: &[Value],
+    analysis: &Value,
+) -> Result<Vec<(String, String, String)>> {
     let found = discovery::local_discoveries(records, analysis, &project::now());
     let mut repo = lock(&runtime.repository)?;
     let added = repo.sync_local_discoveries(found)?;
     Ok(new_items(&repo.data.discoveries, &added))
 }
-fn new_items(all: &[silolink::desktop::Discovery], added: &[String]) -> Vec<(String, String, String)> {
+fn new_items(
+    all: &[silolink::desktop::Discovery],
+    added: &[String],
+) -> Vec<(String, String, String)> {
     all.iter()
         .filter(|d| added.contains(&d.id))
         .map(|d| (d.id.clone(), d.fingerprint.clone(), d.title.clone()))
         .collect()
 }
 /// In-app notices for new discoveries; the OS notification is optional.
-pub fn announce(app: &AppHandle, runtime: &Runtime, items: &[(String, String, String)], system: bool) {
+pub fn announce(
+    app: &AppHandle,
+    runtime: &Runtime,
+    items: &[(String, String, String)],
+    system: bool,
+) {
     for (_, fingerprint, title) in items {
         crate::lifecycle::notify_once(
             app,
@@ -82,7 +94,12 @@ pub fn start_analysis(
         let aliases: HashMap<String, String> = sample
             .aliases
             .iter()
-            .map(|(alias, r)| (alias.clone(), r.record["id"].as_str().unwrap_or("").to_owned()))
+            .map(|(alias, r)| {
+                (
+                    alias.clone(),
+                    r.record["id"].as_str().unwrap_or("").to_owned(),
+                )
+            })
             .collect();
         (sample.prompt, aliases)
     };
@@ -101,12 +118,14 @@ pub fn start_analysis(
         let outcome = answer.and_then(|text| {
             let known = [];
             let sample = discovery::build_prompt(&records, &names, &known)?;
-            let consistent = sample
-                .aliases
-                .iter()
-                .all(|(alias, r)| aliases.get(alias).map(String::as_str) == r.record["id"].as_str());
+            let consistent = sample.aliases.iter().all(|(alias, r)| {
+                aliases.get(alias).map(String::as_str) == r.record["id"].as_str()
+            });
             if !consistent {
-                return Err(error("ANALYSIS_SAMPLE_CHANGED", "The analyzed records changed."));
+                return Err(error(
+                    "ANALYSIS_SAMPLE_CHANGED",
+                    "The analyzed records changed.",
+                ));
             }
             discovery::parse_discoveries(&text, &sample, &provider, &job, &project::now())
         });
@@ -118,7 +137,8 @@ pub fn start_analysis(
             jobs.remove(&job);
         }
         if let Ok(items) = &added {
-            let system = lock(&runtime.repository).is_ok_and(|r| r.data.settings.immediate_notifications);
+            let system =
+                lock(&runtime.repository).is_ok_and(|r| r.data.settings.immediate_notifications);
             announce(&app, &runtime, items, system);
         }
         let _ = app.emit("workspace-changed", json!({"analysisId": job}));
@@ -130,7 +150,12 @@ pub fn start_analysis(
 pub fn maybe_auto_analyze(app: &AppHandle, runtime: &Arc<Runtime>) {
     let (provider, project_ids, since) = match lock(&runtime.repository) {
         Ok(repo) if repo.data.settings.auto_analysis && !repo.data.projects.is_empty() => {
-            if repo.data.analysis_runs.iter().any(|r| r.status == "running") {
+            if repo
+                .data
+                .analysis_runs
+                .iter()
+                .any(|r| r.status == "running")
+            {
                 return;
             }
             let last = repo
@@ -148,7 +173,12 @@ pub fn maybe_auto_analyze(app: &AppHandle, runtime: &Arc<Runtime>) {
             }
             (
                 repo.data.settings.analysis_provider.clone(),
-                repo.data.projects.iter().take(10).map(|p| p.id.clone()).collect::<Vec<_>>(),
+                repo.data
+                    .projects
+                    .iter()
+                    .take(10)
+                    .map(|p| p.id.clone())
+                    .collect::<Vec<_>>(),
                 last,
             )
         }
@@ -161,9 +191,9 @@ pub fn maybe_auto_analyze(app: &AppHandle, runtime: &Arc<Runtime>) {
     let fresh = requests
         .iter()
         .filter(|r| {
-            since.as_deref().is_none_or(|since| {
-                r.record["occurredAt"].as_str().is_some_and(|at| at > since)
-            })
+            since
+                .as_deref()
+                .is_none_or(|since| r.record["occurredAt"].as_str().is_some_and(|at| at > since))
         })
         .count();
     if fresh >= 5 {
@@ -173,7 +203,10 @@ pub fn maybe_auto_analyze(app: &AppHandle, runtime: &Arc<Runtime>) {
 
 pub fn compare_rules(runtime: &Runtime, project_ids: &[String]) -> Result<Value> {
     if project_ids.is_empty() || project_ids.len() > 10 {
-        return Err(error("INVALID_RULE_SCOPE", "Choose 1-10 projects to compare."));
+        return Err(error(
+            "INVALID_RULE_SCOPE",
+            "Choose 1-10 projects to compare.",
+        ));
     }
     let repo = lock(&runtime.repository)?;
     let mut lines = vec![];
@@ -181,7 +214,10 @@ pub fn compare_rules(runtime: &Runtime, project_ids: &[String]) -> Result<Value>
     let mut documents = vec![];
     for id in project_ids {
         let project = repo.project(id)?;
-        let name = project.metadata["name"].as_str().unwrap_or("project").to_owned();
+        let name = project.metadata["name"]
+            .as_str()
+            .unwrap_or("project")
+            .to_owned();
         let inventory = silolink::documents::scan(&project)?;
         let paths: Vec<String> = inventory["documents"]
             .as_array()
@@ -217,7 +253,12 @@ pub fn compare_rules(runtime: &Runtime, project_ids: &[String]) -> Result<Value>
     }
     let mut result = rules::compare(&lines, &projects);
     result["documents"] = json!(documents);
-    result["projects"] = json!(projects.iter().map(|(id, name)| json!({"id":id,"name":name})).collect::<Vec<_>>());
+    result["projects"] = json!(
+        projects
+            .iter()
+            .map(|(id, name)| json!({"id":id,"name":name}))
+            .collect::<Vec<_>>()
+    );
     Ok(result)
 }
 
@@ -242,9 +283,12 @@ pub fn rule_plan(
     rules::append_plan(
         project_id,
         path,
-        current
-            .as_ref()
-            .map(|d| (d["revision"].as_str().unwrap_or(""), d["text"].as_str().unwrap_or(""))),
+        current.as_ref().map(|d| {
+            (
+                d["revision"].as_str().unwrap_or(""),
+                d["text"].as_str().unwrap_or(""),
+            )
+        }),
         heading,
         selected,
         "다른 프로젝트와 비교해 선택한 규칙을 이 프로젝트에 추가합니다.",
@@ -260,7 +304,10 @@ pub fn report(runtime: &Runtime, project_id: &str) -> Result<String> {
     Ok(project_report(
         &repo.data,
         project_id,
-        names.get(project_id).map(String::as_str).unwrap_or("project"),
+        names
+            .get(project_id)
+            .map(String::as_str)
+            .unwrap_or("project"),
         inventory.as_ref(),
         &analysis,
         &project::now(),
@@ -276,23 +323,59 @@ mod tests {
         let profile = tempfile::TempDir::new().unwrap();
         let first = tempfile::TempDir::new().unwrap();
         let second = tempfile::TempDir::new().unwrap();
-        std::fs::write(first.path().join("AGENTS.md"), "# 규칙\n- 커밋 메시지는 한국어로 쓴다\n- 디자인 토큰만 사용한다\n").unwrap();
-        std::fs::write(second.path().join("AGENTS.md"), "# Rules\n- 커밋 메시지는 한국어로 쓴다.\n").unwrap();
+        std::fs::write(
+            first.path().join("AGENTS.md"),
+            "# 규칙\n- 커밋 메시지는 한국어로 쓴다\n- 디자인 토큰만 사용한다\n",
+        )
+        .unwrap();
+        std::fs::write(
+            second.path().join("AGENTS.md"),
+            "# Rules\n- 커밋 메시지는 한국어로 쓴다.\n",
+        )
+        .unwrap();
         let runtime = Runtime::open(profile.path(), profile.path().join("Data")).unwrap();
         let (a, b) = {
             let mut repo = lock(&runtime.repository).unwrap();
-            (repo.connect(first.path(), true).unwrap(), repo.connect(second.path(), true).unwrap())
+            (
+                repo.connect(first.path(), true).unwrap(),
+                repo.connect(second.path(), true).unwrap(),
+            )
         };
         let result = compare_rules(&runtime, &[a.clone(), b.clone()]).unwrap();
-        assert_eq!(result["summary"], json!({"shared":1,"variant":0,"local":1,"rules":3}));
-        let local = result["groups"].as_array().unwrap().iter().find(|g| g["status"] == "local").unwrap();
+        assert_eq!(
+            result["summary"],
+            json!({"shared":1,"variant":0,"local":1,"rules":3})
+        );
+        let local = result["groups"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|g| g["status"] == "local")
+            .unwrap();
         assert_eq!(local["missingProjectIds"], json!([b]));
-        let plan = rule_plan(&runtime, &b, "AGENTS.md", "공통 규칙", &["디자인 토큰만 사용한다".into()]).unwrap();
-        assert_eq!(plan["operations"][0]["content"], "# Rules\n- 커밋 메시지는 한국어로 쓴다.\n\n## 공통 규칙\n\n- 디자인 토큰만 사용한다\n");
+        let plan = rule_plan(
+            &runtime,
+            &b,
+            "AGENTS.md",
+            "공통 규칙",
+            &["디자인 토큰만 사용한다".into()],
+        )
+        .unwrap();
+        assert_eq!(
+            plan["operations"][0]["content"],
+            "# Rules\n- 커밋 메시지는 한국어로 쓴다.\n\n## 공통 규칙\n\n- 디자인 토큰만 사용한다\n"
+        );
         // The generated plan passes the same review used for hand-written plans.
         let checked = runtime.checked_plan(&b, plan).unwrap();
         assert_eq!(checked["changeState"], "ready");
-        let created = rule_plan(&runtime, &a, "docs/RULES.md", "새 규칙", &["새 규칙 문장".into()]).unwrap();
+        let created = rule_plan(
+            &runtime,
+            &a,
+            "docs/RULES.md",
+            "새 규칙",
+            &["새 규칙 문장".into()],
+        )
+        .unwrap();
         assert!(created["operations"][0]["expectedRevision"].is_null());
     }
     #[test]
@@ -300,7 +383,10 @@ mod tests {
         let profile = tempfile::TempDir::new().unwrap();
         let folder = tempfile::TempDir::new().unwrap();
         let runtime = Runtime::open(profile.path(), profile.path().join("Data")).unwrap();
-        let id = lock(&runtime.repository).unwrap().connect(folder.path(), true).unwrap();
+        let id = lock(&runtime.repository)
+            .unwrap()
+            .connect(folder.path(), true)
+            .unwrap();
         let records: Vec<Value> = (0..3)
             .map(|i| json!({"id":format!("r{i}"),"role":"user","projectId":id,"text":format!("배포 스크립트 점검해줘 {i}"),
                 "occurredAt":format!("2026-11-0{}T00:00:00Z",i+1),"source":{"provider":"claude","sessionId":"s","itemId":i,"sourceKind":null}}))
@@ -309,17 +395,33 @@ mod tests {
         let added = refresh_local(&runtime, &records, &analysis).unwrap();
         assert_eq!(added.len(), 1);
         let discovery = added[0].0.clone();
-        lock(&runtime.repository).unwrap().review_discovery(&discovery, "dismissed", None).unwrap();
-        assert!(refresh_local(&runtime, &records, &analysis).unwrap().is_empty());
+        lock(&runtime.repository)
+            .unwrap()
+            .review_discovery(&discovery, "dismissed", None)
+            .unwrap();
+        assert!(
+            refresh_local(&runtime, &records, &analysis)
+                .unwrap()
+                .is_empty()
+        );
         {
             let repo = lock(&runtime.repository).unwrap();
             assert_eq!(repo.data.discoveries.len(), 1);
             assert_eq!(repo.data.discoveries[0].status, "dismissed");
         }
         // An unreviewed discovery whose records no longer repeat is retired; reviewed ones stay.
-        lock(&runtime.repository).unwrap().review_discovery(&discovery, "new", None).unwrap();
+        lock(&runtime.repository)
+            .unwrap()
+            .review_discovery(&discovery, "new", None)
+            .unwrap();
         let fewer = &records[..2];
         refresh_local(&runtime, fewer, &analyze_records(fewer)).unwrap();
-        assert!(lock(&runtime.repository).unwrap().data.discoveries.is_empty());
+        assert!(
+            lock(&runtime.repository)
+                .unwrap()
+                .data
+                .discoveries
+                .is_empty()
+        );
     }
 }

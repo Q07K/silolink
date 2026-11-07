@@ -270,7 +270,8 @@ pub async fn run_analysis(
 ) -> Reply {
     let runtime = state.inner().clone();
     worker(move || {
-        crate::insight::start_analysis(app, runtime, provider, project_ids).map(|id| json!({"id":id}))
+        crate::insight::start_analysis(app, runtime, provider, project_ids)
+            .map(|id| json!({"id":id}))
     })
     .await
 }

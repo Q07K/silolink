@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "silolink",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "프로젝트 문서와 AI 대화 기록을 연결하고, 정리할 부분과 다음 작업을 함께 살펴봅니다. Windows 체험판.",
   "author": { "name": "SiloLink" },
   "extensions": {

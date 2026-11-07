@@ -108,7 +108,12 @@ pub async fn background(app: AppHandle, runtime: Arc<Runtime>) {
         })
         .await
         {
-            crate::insight::announce(&app, &runtime, &items, data.settings.immediate_notifications);
+            crate::insight::announce(
+                &app,
+                &runtime,
+                &items,
+                data.settings.immediate_notifications,
+            );
         }
     }
 }

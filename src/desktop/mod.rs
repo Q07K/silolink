@@ -516,12 +516,25 @@ impl Desktop {
         let references = planning::similar(&self.data.tasks, &task, now);
         let estimate = planning::estimate(&self.data.tasks, &task, now, &project::now());
         let changed = task.estimates.last().is_none_or(|last| {
-            (last.low_minutes, last.median_minutes, last.high_minutes, &last.basis_task_ids)
-                != (estimate.low_minutes, estimate.median_minutes, estimate.high_minutes, &estimate.basis_task_ids)
+            (
+                last.low_minutes,
+                last.median_minutes,
+                last.high_minutes,
+                &last.basis_task_ids,
+            ) != (
+                estimate.low_minutes,
+                estimate.median_minutes,
+                estimate.high_minutes,
+                &estimate.basis_task_ids,
+            )
         });
         if changed {
             let mut next = self.data.clone();
-            let stored = next.tasks.iter_mut().find(|t| t.id == id).expect("task exists");
+            let stored = next
+                .tasks
+                .iter_mut()
+                .find(|t| t.id == id)
+                .expect("task exists");
             stored.estimates.push(estimate.clone());
             if stored.estimates.len() > 20 {
                 stored.estimates.remove(0);
@@ -542,9 +555,15 @@ impl Desktop {
                 .find(|d| d.fingerprint == discovery.fingerprint)
             {
                 Some(existing) => {
-                    let known: std::collections::BTreeSet<_> =
-                        existing.evidence.iter().map(|e| e.record_id.clone()).collect();
-                    let grew = discovery.evidence.iter().any(|e| !known.contains(&e.record_id));
+                    let known: std::collections::BTreeSet<_> = existing
+                        .evidence
+                        .iter()
+                        .map(|e| e.record_id.clone())
+                        .collect();
+                    let grew = discovery
+                        .evidence
+                        .iter()
+                        .any(|e| !known.contains(&e.record_id));
                     if grew || existing.summary != discovery.summary {
                         existing.evidence = discovery.evidence;
                         existing.project_ids = discovery.project_ids;
@@ -579,20 +598,25 @@ impl Desktop {
     pub fn sync_local_discoveries(&mut self, found: Vec<Discovery>) -> Result<Vec<String>> {
         let current: std::collections::BTreeSet<String> =
             found.iter().map(|d| d.fingerprint.clone()).collect();
-        let stale = self
-            .data
-            .discoveries
-            .iter()
-            .any(|d| d.source == "local" && d.status == "new" && !current.contains(&d.fingerprint));
+        let stale =
+            self.data.discoveries.iter().any(|d| {
+                d.source == "local" && d.status == "new" && !current.contains(&d.fingerprint)
+            });
         if stale {
             let mut next = self.data.clone();
-            next.discoveries
-                .retain(|d| !(d.source == "local" && d.status == "new" && !current.contains(&d.fingerprint)));
+            next.discoveries.retain(|d| {
+                !(d.source == "local" && d.status == "new" && !current.contains(&d.fingerprint))
+            });
             self.commit(next)?;
         }
         self.merge_discoveries(found)
     }
-    pub fn review_discovery(&mut self, id: &str, status: &str, correction: Option<&str>) -> Result<()> {
+    pub fn review_discovery(
+        &mut self,
+        id: &str,
+        status: &str,
+        correction: Option<&str>,
+    ) -> Result<()> {
         if !discovery::STATUSES.contains(&status)
             || correction.is_some_and(|c| c.len() > 4000)
             || (status == "corrected" && correction.is_none_or(|c| c.trim().is_empty()))
@@ -606,16 +630,34 @@ impl Desktop {
             .find(|d| d.id == id)
             .ok_or_else(|| invalid("Discovery not found."))?;
         item.status = status.into();
-        item.correction = correction.map(|c| c.trim().to_owned()).filter(|c| !c.is_empty());
+        item.correction = correction
+            .map(|c| c.trim().to_owned())
+            .filter(|c| !c.is_empty());
         item.updated_at = project::now();
         self.commit(next)
     }
-    pub fn begin_analysis(&mut self, provider: &str, project_ids: &[String], request_count: usize) -> Result<String> {
-        if !matches!(provider, "codex" | "claude") || project_ids.is_empty() || project_ids.len() > 10 {
+    pub fn begin_analysis(
+        &mut self,
+        provider: &str,
+        project_ids: &[String],
+        request_count: usize,
+    ) -> Result<String> {
+        if !matches!(provider, "codex" | "claude")
+            || project_ids.is_empty()
+            || project_ids.len() > 10
+        {
             return Err(invalid("Choose a supported provider and 1-10 projects."));
         }
-        if self.data.analysis_runs.iter().any(|r| r.status == "running") {
-            return Err(Error::new("ANALYSIS_RUNNING", "An analysis is already running."));
+        if self
+            .data
+            .analysis_runs
+            .iter()
+            .any(|r| r.status == "running")
+        {
+            return Err(Error::new(
+                "ANALYSIS_RUNNING",
+                "An analysis is already running.",
+            ));
         }
         let id = Uuid::new_v4().to_string();
         let mut next = self.data.clone();
@@ -645,7 +687,11 @@ impl Desktop {
         let (status, error, found, rejected) = match outcome {
             Ok((found, rejected)) => ("completed", None, found, rejected),
             Err(e) => (
-                if e.code == "AI_CANCELLED" { "cancelled" } else { "failed" },
+                if e.code == "AI_CANCELLED" {
+                    "cancelled"
+                } else {
+                    "failed"
+                },
                 Some(e.json()),
                 vec![],
                 0,

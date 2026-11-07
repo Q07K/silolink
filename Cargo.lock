@@ -3456,7 +3456,7 @@ dependencies = [
 
 [[package]]
 name = "silolink"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "chrono",
  "dirs 6.0.0",
@@ -3478,7 +3478,7 @@ dependencies = [
 
 [[package]]
 name = "silolink-desktop"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "chrono",
  "dirs 6.0.0",

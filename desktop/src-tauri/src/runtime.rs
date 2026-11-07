@@ -120,7 +120,11 @@ impl Runtime {
         if !added.is_empty() {
             let mut repo = lock(&self.repository)?;
             for (_, fingerprint, title) in &added {
-                repo.record_notice(&format!("discovery:{fingerprint}"), "discovery", &format!("새 발견: {title}"))?;
+                repo.record_notice(
+                    &format!("discovery:{fingerprint}"),
+                    "discovery",
+                    &format!("새 발견: {title}"),
+                )?;
             }
         }
         let data = lock(&self.repository)?.data.clone();
@@ -306,7 +310,9 @@ pub fn mutate(runtime: &Runtime, request: Mutation) -> Result<Value> {
             body,
             evidence_ids,
             origin_id,
-        } => Some(repo.add_note_from(&project_id, &kind, &title, &body, evidence_ids, origin_id)?),
+        } => {
+            Some(repo.add_note_from(&project_id, &kind, &title, &body, evidence_ids, origin_id)?)
+        }
         Mutation::NoteStatus { id, status } => {
             repo.set_note_status(&id, &status)?;
             None

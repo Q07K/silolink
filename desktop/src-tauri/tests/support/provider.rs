@@ -77,5 +77,8 @@ fn analysis(prompt: &str) -> String {
             "evidence":[{"id":alias,"quote":"깔끔하게"}]}));
     }
     discoveries.push(serde_json::json!({"kind":"repeated-topic","title":"근거가 없는 항목","summary":"x","evidence":[{"id":"r9999","quote":"x"}]}));
-    format!("분석 결과입니다.\n```json\n{}\n```", serde_json::json!({"discoveries":discoveries}))
+    format!(
+        "분석 결과입니다.\n```json\n{}\n```",
+        serde_json::json!({"discoveries":discoveries})
+    )
 }

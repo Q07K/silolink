@@ -23,7 +23,9 @@ pub fn worked_milliseconds(task: &Task, now: i64) -> i64 {
                 .ok()?
                 .timestamp_millis();
             let end = match &s.ended_at {
-                Some(end) => chrono::DateTime::parse_from_rfc3339(end).ok()?.timestamp_millis(),
+                Some(end) => chrono::DateTime::parse_from_rfc3339(end)
+                    .ok()?
+                    .timestamp_millis(),
                 None => now,
             };
             (end >= start).then_some((start, end))
@@ -120,23 +122,57 @@ mod tests {
     }
     #[test]
     fn overlapping_spans_are_counted_once() {
-        let t = task("a", "x", true, &[("2026-11-01T00:00:00Z", "2026-11-01T01:00:00Z"), ("2026-11-01T00:30:00Z", "2026-11-01T01:30:00Z")]);
+        let t = task(
+            "a",
+            "x",
+            true,
+            &[
+                ("2026-11-01T00:00:00Z", "2026-11-01T01:00:00Z"),
+                ("2026-11-01T00:30:00Z", "2026-11-01T01:30:00Z"),
+            ],
+        );
         assert_eq!(worked_milliseconds(&t, 0), 90 * 60_000);
     }
     #[test]
     fn estimates_from_similar_finished_work_only() {
         let tasks = vec![
-            task("1", "로그인 화면 구현", true, &[("2026-11-01T00:00:00Z", "2026-11-01T01:00:00Z")]),
-            task("2", "로그인 화면 구현 수정", true, &[("2026-11-01T00:00:00Z", "2026-11-01T03:00:00Z")]),
-            task("3", "결제 API 연동", true, &[("2026-11-01T00:00:00Z", "2026-11-01T05:00:00Z")]),
-            task("4", "로그인 화면 구현", false, &[("2026-11-01T00:00:00Z", "2026-11-01T09:00:00Z")]),
+            task(
+                "1",
+                "로그인 화면 구현",
+                true,
+                &[("2026-11-01T00:00:00Z", "2026-11-01T01:00:00Z")],
+            ),
+            task(
+                "2",
+                "로그인 화면 구현 수정",
+                true,
+                &[("2026-11-01T00:00:00Z", "2026-11-01T03:00:00Z")],
+            ),
+            task(
+                "3",
+                "결제 API 연동",
+                true,
+                &[("2026-11-01T00:00:00Z", "2026-11-01T05:00:00Z")],
+            ),
+            task(
+                "4",
+                "로그인 화면 구현",
+                false,
+                &[("2026-11-01T00:00:00Z", "2026-11-01T09:00:00Z")],
+            ),
         ];
         let target = task("new", "회원가입 화면 구현", false, &[]);
         let e = estimate(&tasks, &target, 0, "now");
         assert_eq!(e.method, "similar-completed-tasks");
         assert_eq!((e.low_minutes, e.high_minutes), (Some(60), Some(180)));
-        assert!(!e.basis_task_ids.contains(&"3".to_string()) && !e.basis_task_ids.contains(&"4".to_string()));
+        assert!(
+            !e.basis_task_ids.contains(&"3".to_string())
+                && !e.basis_task_ids.contains(&"4".to_string())
+        );
         let none = estimate(&tasks[2..3], &target, 0, "now");
-        assert_eq!((none.method.as_str(), none.median_minutes), ("no-comparable-task", None));
+        assert_eq!(
+            (none.method.as_str(), none.median_minutes),
+            ("no-comparable-task", None)
+        );
     }
 }

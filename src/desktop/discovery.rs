@@ -90,7 +90,11 @@ fn excerpt(text: &str, limit: usize) -> String {
     }
 }
 fn evidence(request: &Request, quote: Option<&str>) -> Evidence {
-    let flat = request.text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let flat = request
+        .text
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
     // Keep a quote only when it is really in the request; otherwise show the request itself.
     let quote = quote
         .map(|q| q.split_whitespace().collect::<Vec<_>>().join(" "))
@@ -119,7 +123,11 @@ pub fn local_discoveries(records: &[Value], analysis: &Value, now: &str) -> Vec<
         .filter_map(|r| r.record["id"].as_str().map(|id| (id, r)))
         .collect();
     let mut result = Vec::new();
-    for group in analysis["repeatedRequests"].as_array().into_iter().flatten() {
+    for group in analysis["repeatedRequests"]
+        .as_array()
+        .into_iter()
+        .flatten()
+    {
         let count = group["count"].as_u64().unwrap_or(0);
         if count < 3 {
             continue;
@@ -368,7 +376,11 @@ mod tests {
         let records = records();
         let names = HashMap::from([("p".to_string(), "앱".to_string())]);
         let sample = build_prompt(&records, &names, &[]).unwrap();
-        assert!(sample.prompt.contains("r1 | 앱 | claude | 2026-11-01 | 배포 스크립트 점검해줘 0"));
+        assert!(
+            sample
+                .prompt
+                .contains("r1 | 앱 | claude | 2026-11-01 | 배포 스크립트 점검해줘 0")
+        );
         let answer = r#"결과입니다 ```json
 {"discoveries":[
  {"kind":"repeated-topic","title":"배포 점검 반복","summary":"s","basis":"observed","suggestedAction":"rule","evidence":[{"id":"r1","quote":"배포 스크립트"},{"id":"r2","quote":"없는 문장"}]},
@@ -397,7 +409,10 @@ mod tests {
     fn too_few_requests_are_reported_instead_of_guessed() {
         let records = &records()[..2];
         assert_eq!(
-            build_prompt(records, &HashMap::new(), &[]).err().unwrap().code,
+            build_prompt(records, &HashMap::new(), &[])
+                .err()
+                .unwrap()
+                .code,
             "ANALYSIS_NOT_ENOUGH_DATA"
         );
     }
