@@ -130,7 +130,7 @@ impl Runtime {
         }
         let data = lock(&self.repository)?.data.clone();
         Ok(
-            json!({"workspace":data,"defaultStateDirectory":self.default_state_directory,"inventories":inventories,"collections":collections,"records":records,"analysis":analysis,"projectConnectionErrors":connection_errors,"loadedAt":project::now()}),
+            json!({"workspace":data,"defaultStateDirectory":self.default_state_directory,"inventories":inventories,"collections":collections,"records":records,"analysis":analysis,"projectConnectionErrors":connection_errors,"defaultDelegationPhrases":silolink::desktop::detection::DELEGATION_PHRASES,"loadedAt":project::now()}),
         )
     }
     pub fn sync_projects(&self) -> Result<bool> {

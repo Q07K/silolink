@@ -388,9 +388,19 @@ mod tests {
         )
         .unwrap();
         crate::runtime::mutate(&runtime, request).unwrap();
-        let repo = lock(&runtime.repository).unwrap();
-        assert_eq!(repo.data.request_marks[0].record_id, "r1");
-        assert!(repo.detection().intentional.contains("r1"));
+        {
+            let repo = lock(&runtime.repository).unwrap();
+            assert_eq!(repo.data.request_marks[0].record_id, "r1");
+            assert!(repo.detection().intentional.contains("r1"));
+        }
+        let snapshot = runtime.snapshot().unwrap();
+        assert!(
+            snapshot["defaultDelegationPhrases"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|p| p == "깔끔하게")
+        );
     }
     #[test]
     fn local_discoveries_keep_reviews_and_are_announced_once() {

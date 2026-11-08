@@ -8,6 +8,7 @@ export function createPreviewSnapshot(scenario: PreviewScenario, theme: PreviewT
   const earlier = (hours: number) => new Date(now.getTime() - hours * 3_600_000).toISOString();
   const snapshot: Snapshot = {
     defaultStateDirectory: "디자인 리뷰용 예시 저장 위치",
+    defaultDelegationPhrases: ["잘해줘", "잘 해줘", "잘 적용", "잘 처리", "잘 정리", "알아서", "적당히", "깔끔하게", "예쁘게", "보기 좋게", "자연스럽게", "느낌", "대충", "best practice"],
     loadedAt: now.toISOString(),
     workspace: {
       schemaVersion: 1,

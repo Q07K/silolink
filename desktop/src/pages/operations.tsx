@@ -17,6 +17,7 @@ import { titleFromQuestion } from "../titles";
 import { NoteExport } from "../note-export";
 import { useWorkspace } from "../context";
 import { ToolConnections } from "../tool-connections";
+import { DelegationPhrases } from "../delegation-settings";
 import { getSettingsSection } from "../settings-sections";
 import {
   Badge,
@@ -676,6 +677,9 @@ export function SettingsPage() {
             />
           </div>
           </>}
+          {view === "detection" && <DelegationPhrases defaults={s.defaultDelegationPhrases ?? []}
+            added={draft.delegationPhrasesAdded ?? []} removed={draft.delegationPhrasesRemoved ?? []}
+            onChange={(added, removed) => setDraft((previous) => ({ ...previous, delegationPhrasesAdded: added, delegationPhrasesRemoved: removed }))} />}
           {view === "review" && <><div className="form-row">
             <div>
               <strong>발견 즉시 알림</strong>

@@ -134,7 +134,7 @@ it("설정 아이콘 하나에서 항목을 분류하고 분류 사이의 입력
   expect(settings.textContent).toBe("");
   fireEvent.click(settings);
   const categories = screen.getByRole("navigation", { name: "설정 분류" });
-  expect(within(categories).getAllByRole("button")).toHaveLength(5);
+  expect(within(categories).getAllByRole("button")).toHaveLength(6);
   fireEvent.click(within(categories).getByRole("button", { name: "화면" }));
   fireEvent.change(screen.getByRole("combobox", { name: "화면 테마" }), { target: { value: "dark" } });
   fireEvent.click(within(categories).getByRole("button", { name: "알림·회고" }));

@@ -37,6 +37,8 @@ export interface Settings {
   theme: "system" | "light" | "dark";
   autoAnalysis?: boolean;
   analysisProvider?: "codex" | "claude";
+  delegationPhrasesAdded?: string[];
+  delegationPhrasesRemoved?: string[];
 }
 export interface Project {
   id: string;
@@ -280,6 +282,8 @@ export interface Analysis {
 }
 export interface Snapshot {
   defaultStateDirectory: string;
+  /** The built-in delegation phrase dictionary, before the user's additions and removals. */
+  defaultDelegationPhrases?: string[];
   projectConnectionErrors?: { registration: string; error: NativeError }[];
   workspace: Workspace;
   inventories: Inventory[];
