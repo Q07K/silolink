@@ -1,5 +1,20 @@
 # 네이티브 CLI·데스크톱 검증 사례
 
+## PRD v0.2 단계 1 · 감지 기반 — 2026-11-08
+
+[계획](../docs/superpowers/plans/2026-11-08-stage1-detection.md). 로컬 결정적 계산만 쓰며 외부 AI 호출과 기본값 변경은 없다.
+
+| 요구 | 검증 | 결과 |
+| --- | --- | --- |
+| R11-B 요청 단계 분류 | `detection.rs` `classifies_stages`, `explore_stage_is_excluded` | 실행·탐색·진단·검증·기타를 첫 일치 규칙으로 분류. 탐색 단계 요청은 후보에서 빠지고 단계 집계에만 남음 |
+| R11-B 표현 신호 | `phrase_and_area_signals`, `specific_request_is_not_candidate`, `english_area_only_request` | “UI/UX 잘 적용해서 작업해줘”는 ‘잘 적용’과 영역만 지정 두 신호(근거 ‘추정’). 숫자·백틱·파일명이 있으면 영역만 지정으로 보지 않음. “optimize it”도 영역만 지정 |
+| R02-E·R11-B 대화 결과 신호 | `clarification_signal_from_reply`, `correction_and_retry_signals`, `offer_after_long_reply_is_not_clarification`, `injected_records_are_skipped_between_turns`, `signals_stay_inside_one_session` | AI가 되물은 질문·‘그거 말고’ 정정·비슷한 재요청을 원문과 함께 앞 요청에 붙이고 근거를 ‘기록에서 확인’으로 표시. 일을 끝낸 긴 답의 제안형 질문, 도구가 끼워 넣은 메시지, 다른 세션은 제외 |
+| R11-H 일부러 넓게 맡김 | `intentional_marks_exclude`, `native_desktop.rs` `request_marks_persist_and_toggle`, `insight.rs` `mark_request_mutation_is_stored_and_feeds_detection`, `detection.test.tsx` | 화면의 ‘일부러 넓게 맡김’ 표시와 요청 안의 #넓게·#탐색을 후보에서 빼고 개수만 보임. 재시작 후 유지, 표시 해제 가능 |
+| R11-B 위임 표현 사전 | `removed_phrase_no_longer_matches`, `delegation_phrases_are_validated`, `settings-navigation.test.tsx` | 설정 ‘요청 감지’에서 기본 표현을 빼고 내 표현을 추가. 1~40자, 목록당 100개, 앞뒤 공백·중복 정리. 기본 목록은 Rust 상수 하나를 스냅숏으로 전달 |
+| 5절 근거 표시 4종 | `components.test.tsx`, `cycle.test.tsx` | 기록에서 확인·추정·모호·미확인을 같은 배지로 표시. 발견의 해석 라벨을 ‘추정’으로 통일 |
+| 화면 | `detection.test.tsx` | 사용 분석 ‘넓게 맡긴 요청 N’ 탭: 단계 집계, 후보별 단계·근거·신호(대화 결과 먼저)·판단 이유·인용, 빈 상태 안내. 요약 화면의 ‘기준 없이 맡긴 요청’도 같은 후보를 씀 |
+| 남은 범위 | — | 실제 사용자 기록에서의 감지 품질, 대화 중 감지(단계 4), 용어집·알림(단계 2)은 미검증·미구현. `design_preview.py`는 탭 이름을 갱신했으나 Python 환경이 없어 이번에 실행하지 않음 |
+
 ## 설정 사이드바·HTML 디자인 시스템 검토판 — 2026-11-06
 
 | 요구 | 검증과 결과 |
