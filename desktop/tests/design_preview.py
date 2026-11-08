@@ -34,7 +34,7 @@ with sync_playwright() as playwright:
     page = browser.new_page(viewport={'width': 1320, 'height': 940})
     page.on('pageerror', lambda error: errors.append(str(error)))
     try:
-        page.goto('http://127.0.0.1:1430/', wait_until='networkidle')
+        page.goto('http://127.0.0.1:7431/', wait_until='networkidle')
         assert page.url.endswith('/design.html')
         expect(page.get_by_role('region', name='디자인 미리보기')).to_contain_text('예시 데이터')
         for theme in ['light', 'dark']:
@@ -301,7 +301,7 @@ with sync_playwright() as playwright:
         expect_footer_action(page.get_by_role('button', name='AI 대화 기록 가져오기', exact=True), 'import')
         expect_footer_action(page.get_by_role('button', name='AI 기록 수집 켜기', exact=True), 'repeat-2')
         # The ordinary app build still refuses browser access instead of showing fixtures.
-        response = page.request.get('http://127.0.0.1:1430/src/api.ts')
+        response = page.request.get('http://127.0.0.1:7431/src/api.ts')
         assert 'DESKTOP_REQUIRED' in response.text()
         assert 'createPreviewSnapshot' not in response.text()
         page.get_by_role('link', name='디자인 시스템', exact=True).click()

@@ -14,7 +14,7 @@ export default mergeConfig(base, {
       });
     },
   }],
-  server: { host: "127.0.0.1", port: 1430, strictPort: true, open: false },
+  server: { host: "127.0.0.1", port: 7431, strictPort: true, open: false },
   resolve: { alias: [
     { find: /^(\.\/|\.\.\/)api$/, replacement: fileURLToPath(new URL("./src/design-preview/api.ts", import.meta.url)) },
     { find: "@tauri-apps/api/event", replacement: fileURLToPath(new URL("./src/design-preview/events.ts", import.meta.url)) },
