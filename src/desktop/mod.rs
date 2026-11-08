@@ -1,4 +1,5 @@
 mod analysis;
+pub mod detection;
 pub mod discovery;
 mod export;
 pub mod planning;
