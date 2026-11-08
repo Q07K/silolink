@@ -127,6 +127,8 @@ export interface EstimateResult {
   references: { taskId: string; title: string; projectId: string; phase: string; minutes: number; userTested: boolean; similarity: number }[];
   changed: boolean;
 }
+/** Evidence state shown on every claim: seen in records, inferred, ambiguous, or unverified. */
+export type Basis = "observed" | "inferred" | "ambiguous" | "unverified";
 export interface Evidence {
   recordId: string;
   projectId: string;
@@ -147,7 +149,7 @@ export interface Discovery {
   kind: DiscoveryKind;
   title: string;
   summary: string;
-  basis: "observed" | "inferred";
+  basis: Basis;
   projectIds: string[];
   evidence: Evidence[];
   suggestedAction: "learn" | "research" | "rule" | "task" | "none";
