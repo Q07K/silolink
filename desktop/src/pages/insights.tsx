@@ -11,6 +11,7 @@ import {
   MarkdownContent,
   Tabs,
 } from "../components";
+import { BroadRequests } from "../broad-requests";
 import { DiscoveryCard, DiscoveryFeed } from "../discoveries";
 import { inPeriod, recordsInPeriod, taskMilliseconds, when } from "../metrics";
 
@@ -33,7 +34,7 @@ export function AnalysisPage() {
           ["discoveries", "발견"],
           ["repeated", "반복 요청"],
           ["terms", "용어 분포"],
-          ["expressions", "표현 후보"],
+          ["expressions", `넓게 맡긴 요청 ${(s.analysis.requestSignals ?? []).length}`],
         ]}
       >
       {view === "discoveries" ? (
@@ -92,27 +93,7 @@ export function AnalysisPage() {
           )}
         </>
       ) : (
-        <>
-          {s.analysis.ambiguousExpressions.length ? (
-            s.analysis.ambiguousExpressions.map((e) => (
-              <section className="panel spaced" key={e.recordId}>
-                <div className="inline">
-                  <Badge accent>검토할 표현</Badge>
-                  {e.phrases.map((p) => <Badge key={p}>{p}</Badge>)}
-                </div>
-                <blockquote>{e.text}</blockquote>
-                <p className="micro">단어 일치 후보 · {projectName(e.projectId)} · 이해 공백 판정 아님</p>
-                <Actions>
-                  <Button onClick={() => ask("다음 요청에서 모호할 수 있는 개념·뜻의 후보와 더 구체적인 요청 예시를 원문 문맥에 맞게 설명해줘.", "learning", [e.recordId])}>
-                    <MessageCircle aria-hidden="true" />개념과 요청을 함께 다듬기
-                  </Button>
-                </Actions>
-              </section>
-            ))
-          ) : (
-            <Empty title="표현 후보가 아직 없습니다">짧은 요청이나 수정 횟수만으로 이해 부족을 판단하지 않습니다.</Empty>
-          )}
-        </>
+        <BroadRequests />
       )}
       {view === "repeated" && s.analysis.repeatedRequests.length > 0 && (
         <Actions>

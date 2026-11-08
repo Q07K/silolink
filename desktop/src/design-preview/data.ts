@@ -50,7 +50,7 @@ export function createPreviewSnapshot(scenario: PreviewScenario, theme: PreviewT
   const hours = [10, 11, 14, 15, 16, 19, 20, 21, 21, 22, 22, 22, 23, 23, 0, 1];
   const plain = ["설정 화면의 버튼 높이를 40px로 맞추고 항목 간격을 24px로 통일해줘.", "기록 목록에 날짜별 구분선을 넣고 오늘 항목을 먼저 보여줘.",
     "수집 실패 알림에 원인과 다시 시도 버튼을 추가해줘.", "README의 설치 절차를 Windows 기준으로 다시 정리해줘.", "포트폴리오 카드에 사용한 기술을 배지로 보여줘."];
-  const broad = [["UI/UX 잘 적용해서 작업해줘.", "잘"], ["알아서 최적화 해줘.", "알아서"], ["화면을 깔끔하게 정리해줘.", "깔끔하게"]] as const;
+  const broad = [["UI/UX 잘 적용해서 작업해줘.", "잘 적용"], ["알아서 최적화 해줘.", "알아서"], ["화면을 깔끔하게 정리해줘.", "깔끔하게"]] as const;
   const vague: Snapshot["analysis"]["ambiguousExpressions"] = [{ recordId: "design-record-3", projectId: "design-silolink", text: requests[3], phrases: ["깔끔하게"], status: "candidate" }];
   ([[18, 0.36], [16, 0.34], [22, 0.3], [20, 0.25], [24, 0.2], [21, 0.15], [25, 0.1]] as const).forEach(([count, broadShare], age) => {
     for (let n = 0; n < count; n += 1) {
@@ -76,6 +76,21 @@ export function createPreviewSnapshot(scenario: PreviewScenario, theme: PreviewT
     projectCount: 2, missingTimestamps: 0, providers, method: "exact-text-and-expression-candidates",
     repeatedRequests: [{ text: requests[0], count: 3, recordIds: [0, 2, 4].map((id) => `design-record-${id}`), projectIds: ["design-silolink"] }],
     ambiguousExpressions: vague,
+    stages: { explore: 9, diagnose: 4, verify: 3, execute: snapshot.records.length - 16 },
+    intentionalRequests: 0,
+    // The newest broad requests as the detector would report them; the first one also drew a question back.
+    requestSignals: [vague[0], ...vague.slice(-7).reverse()].map((e) => {
+      const record = snapshot.records.find((r) => r.id === e.recordId);
+      const asked = e.recordId === "design-record-3";
+      return {
+        recordId: e.recordId, projectId: e.projectId, provider: record?.source.provider ?? "codex", occurredAt: record?.occurredAt ?? null,
+        text: e.text, stage: "execute" as const, basis: asked ? "observed" as const : "inferred" as const,
+        signals: [
+          ...(asked ? [{ kind: "outcome" as const, type: "clarification" as const, reason: "요청 뒤에 AI가 무엇을 원하는지 되물었어요", recordId: "design-reply-3", quote: "첫 화면, 폴더 선택, 연결 버튼 중 어디부터 볼까요?" }] : []),
+          { kind: "expression" as const, type: "phrase" as const, reason: `기준을 ‘${e.phrases[0]}’에 맡긴 표현이 있어요`, recordId: e.recordId, quote: e.phrases[0] },
+        ],
+      };
+    }),
   };
   snapshot.workspace.tasks = ([
     ["메뉴 구조와 화면 이름 검토", "디자인", "design-silolink", false],

@@ -167,7 +167,7 @@ export function UsageOverview() {
     ["이번 주 요청", week.requests, lastWeek.requests, u.weeks.map((w) => w.requests), undefined,
       "Codex·Claude Code 대화에서 내가 직접 입력한 요청. 도구가 끼워 넣은 글과 AI 답변은 빼요."],
     ["기준 없이 맡긴 요청", week.vague, lastWeek.vague, u.weeks.map((w) => w.vague), true,
-      "‘잘’, ‘알아서’, ‘깔끔하게’처럼 기준 없는 표현이 들어간 요청 수."],
+      "기준을 맡긴 표현이 있거나 AI가 되묻고 고쳐 말한 요청 수. 일부러 넓게 맡긴 요청은 빼요."],
     ["반복한 요청", week.repeated, lastWeek.repeated, u.weeks.map((w) => w.repeated), true,
       "앞서 보낸 요청과 같거나 거의 같은 요청 수. 규칙이나 문서로 남기면 줄어요."],
   ] as const;
@@ -178,7 +178,7 @@ export function UsageOverview() {
           <p className="viz-tile-label">기준 없이 맡긴 요청</p>
           <p className="viz-hero-value">{rates[lastRate] ?? 0}<small>%</small></p>
           {firstRate !== lastRate && <Change from={rates[firstRate] ?? 0} to={rates[lastRate] ?? 0} unit="%" since={`${labels[firstRate]} 주`} lowerIsBetter />}
-          <p className="viz-define">‘잘’, ‘알아서’, ‘깔끔하게’처럼 기준 없는 표현이 들어간 요청의 비율이에요. 낮을수록 원하는 결과를 조건으로 적어 맡긴 거예요.</p>
+          <p className="viz-define">‘잘’, ‘알아서’처럼 기준을 맡긴 표현이나, AI의 되물음·정정으로 넓게 맡긴 것으로 보이는 요청의 비율이에요. 일부러 넓게 맡긴 요청은 빼요.</p>
           <p className="viz-define">{labels[lastRate]} 요청 {u.weeks[lastRate].requests}건 중 {u.weeks[lastRate].vague}건</p>
           {u.milestones.length > 0 && (
             <ol className="viz-milestones" aria-label="그동안 남긴 기록">
