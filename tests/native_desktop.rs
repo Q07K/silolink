@@ -115,3 +115,39 @@ fn task_schedule_validates_time_and_timer_preserves_user_test_boundary() {
         Some("2026-11-03T03:30:00Z")
     );
 }
+
+#[test]
+fn request_marks_persist_and_toggle() {
+    let config = TempDir::new().unwrap();
+    let mut app = Desktop::open(config.path()).unwrap();
+    app.mark_request("record-1", true).unwrap();
+    app.mark_request("record-1", true).unwrap();
+    assert_eq!(app.data.request_marks.len(), 1);
+    let mut reopened = Desktop::open(config.path()).unwrap();
+    assert_eq!(reopened.data.request_marks[0].record_id, "record-1");
+    assert_eq!(reopened.data.request_marks[0].kind, "intentional");
+    assert!(reopened.detection().intentional.contains("record-1"));
+    reopened.mark_request("record-1", false).unwrap();
+    assert!(reopened.data.request_marks.is_empty());
+    assert!(reopened.mark_request("", true).is_err());
+    assert!(reopened.mark_request(&"x".repeat(201), true).is_err());
+}
+
+#[test]
+fn delegation_phrases_are_validated() {
+    let config = TempDir::new().unwrap();
+    let mut app = Desktop::open(config.path()).unwrap();
+    let mut settings = app.data.settings.clone();
+    settings.delegation_phrases_added = vec!["가".repeat(41)];
+    assert!(app.save_settings(settings.clone()).is_err());
+    settings.delegation_phrases_added = (0..101).map(|i| format!("표현{i}")).collect();
+    assert!(app.save_settings(settings.clone()).is_err());
+    settings.delegation_phrases_added = vec!["  대강  ".into(), "대강".into()];
+    settings.delegation_phrases_removed = vec![" 깔끔하게 ".into()];
+    app.save_settings(settings).unwrap();
+    assert_eq!(app.data.settings.delegation_phrases_added, ["대강"]);
+    assert_eq!(app.data.settings.delegation_phrases_removed, ["깔끔하게"]);
+    let detection = app.detection();
+    assert!(detection.phrases.iter().any(|p| p == "대강"));
+    assert!(!detection.phrases.iter().any(|p| p == "깔끔하게"));
+}
