@@ -101,3 +101,35 @@ pub fn run() {
         .run(context)
         .expect("SiloLink desktop could not start");
 }
+
+#[cfg(test)]
+mod window_frame_tests {
+    use serde_json::Value;
+
+    fn json(text: &str) -> Value {
+        serde_json::from_str(text).expect("valid JSON")
+    }
+
+    #[test]
+    fn main_window_draws_its_own_title_bar() {
+        let config = json(include_str!("../tauri.conf.json"));
+        let window = &config["app"]["windows"][0];
+        assert_eq!(window["label"], "main");
+        assert_eq!(window["decorations"], false);
+        let capability = json(include_str!("../capabilities/default.json"));
+        let permissions: Vec<&str> = capability["permissions"]
+            .as_array()
+            .expect("permissions")
+            .iter()
+            .filter_map(Value::as_str)
+            .collect();
+        for needed in [
+            "core:window:allow-minimize",
+            "core:window:allow-toggle-maximize",
+            "core:window:allow-close",
+            "core:window:allow-start-dragging",
+        ] {
+            assert!(permissions.contains(&needed), "missing {needed}");
+        }
+    }
+}

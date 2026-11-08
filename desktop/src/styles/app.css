@@ -149,42 +149,44 @@ pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+/* The window has no OS frame. The title bar and menu sit on the frame colour and the page
+   sits on a card inside it. The logo, menu toggle and menu icons share one vertical axis,
+   centred on the folded rail, so nothing moves when the menu folds. */
 .app-shell {
   --sidebar-width: var(--sidebar-expanded);
+  --rail-axis: calc(var(--sidebar-compact) / 2);
   height: 100dvh;
   display: flex;
   flex-direction: column;
+  background: var(--frame);
 }
 .titlebar {
   position: relative;
   z-index: var(--z-header);
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) auto;
   align-items: center;
   height: var(--header-height);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
   flex: none;
+  user-select: none;
 }
 .app-brand {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: var(--space-2);
-  padding: 0 var(--space-3);
+  gap: var(--space-1);
+  padding: 0 0 0 calc(var(--rail-axis) - var(--icon-large) / 2);
   min-width: 0;
   height: 100%;
-  background: var(--sidebar);
-  border-right: 1px solid var(--border);
 }
 .brand-icon {
-  width: var(--space-4);
-  height: var(--space-4);
+  width: var(--icon-large);
+  height: var(--icon-large);
   flex: none;
 }
 .brand-name {
-  font-size: var(--font-subheading);
+  font-size: var(--font-title);
   font-weight: var(--weight-bold);
   line-height: 1;
   letter-spacing: var(--tracking-brand);
@@ -208,13 +210,11 @@ pre {
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
 }
 .sidebar {
-  background: var(--sidebar);
   color: var(--sidebar-text);
   padding: var(--space-3) var(--space-1) var(--space-2);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-right: 1px solid var(--border);
   gap: var(--space-2);
 }
 .project-placeholder { color: var(--muted); font-size: var(--font-caption); padding: var(--space-2) 0; }
@@ -238,7 +238,7 @@ pre {
   align-items: center;
   gap: var(--space-2);
   min-height: var(--control-height);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-2) var(--space-1) calc(var(--rail-axis) - var(--icon-large) / 2 - var(--space-1));
   border-radius: var(--radius-control);
   font-size: var(--font-body);
   line-height: var(--line-control);
@@ -246,17 +246,19 @@ pre {
   width: 100%;
   transition: var(--transition-control);
 }
-/* Hover darkens the label on a light wash; selection adds the accent fill,
-   accent label and semibold weight, so it never relies on color alone. */
+.sidebar :is(nav, .sidebar-bottom) svg { width: var(--icon-large); height: var(--icon-large); flex: none; }
+/* Hover darkens the label on a light wash; selection lifts the item onto the surface
+   with an accent label and semibold weight, so it never relies on color alone. */
 .sidebar button:is(:hover, [data-state~="hover"]) {
-  background: var(--sidebar-hover);
+  background: var(--frame-hover);
   color: var(--sidebar-text);
 }
 .sidebar button:is(:active, [data-state~="active"]) {
   background: var(--sidebar-selected);
 }
 .sidebar button[aria-current="page"] {
-  background: var(--sidebar-selected);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border);
   color: var(--accent);
   font-weight: var(--weight-semibold);
 }
@@ -269,21 +271,18 @@ pre {
 }
 .sidebar-bottom {
   margin-top: auto;
-  border-top: 1px solid var(--border);
   padding-top: var(--space-1);
   flex: none;
 }
 .sidebar-bottom button {
   width: var(--control-height);
   min-height: var(--control-height);
-  justify-content: center;
 }
 .app-shell.sidebar-collapsed { --sidebar-width: var(--sidebar-compact); }
 .sidebar-collapsed .brand-name, .sidebar-collapsed .nav-group-label { display: none; }
-.sidebar-collapsed .app-brand { padding: 0; justify-content: center; }
 .sidebar-collapsed .sidebar button { justify-content: center; padding: var(--space-1); min-height: var(--control-height); }
 .sidebar-collapsed .sidebar-bottom button { width: 100%; }
-.sidebar-collapsed .nav-group + .nav-group { border-top: 1px solid var(--border); padding-top: var(--space-2); }
+.sidebar-collapsed .nav-group + .nav-group { padding-top: var(--space-2); }
 .navigation-tooltip {
   position: fixed;
   z-index: var(--z-tooltip);
@@ -300,20 +299,24 @@ pre {
 }
 .workspace {
   min-width: 0;
+  margin: 0 var(--frame-gap) var(--frame-gap) 0;
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--background);
+  box-shadow: var(--shadow-frame-card);
 }
 .contextbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--page-gutter);
+  padding: 0 var(--space-1) 0 var(--space-3);
   height: 100%;
   min-width: 0;
-  background: var(--surface);
   color: var(--muted);
   font-size: var(--font-body);
 }
@@ -323,9 +326,36 @@ pre {
 .context-location strong { overflow: hidden; text-overflow: ellipsis; }
 .contextbar .context-location .button { padding: var(--space-1) 0; white-space: nowrap; font-size: inherit; }
 .context-location svg { width: var(--icon-small); height: var(--icon-small); color: var(--muted); }
-.context-actions select { max-width: 190px; }
+/* The project picker reads as text in the title bar; its surface appears on hover. */
+.context-actions select {
+  max-width: 190px;
+  min-height: var(--titlebar-control);
+  padding-block: 0;
+  border-color: transparent;
+  background-color: transparent;
+  box-shadow: none;
+  font-weight: var(--weight-semibold);
+  field-sizing: content;
+  text-align-last: left;
+}
+.context-actions select:is(:hover, [data-state~="hover"]) { background-color: var(--soft); }
 .context-actions { gap: var(--space-1); }
-.context-actions > .button, .notification-anchor > .button { min-width: var(--control-height); padding: var(--space-1); }
+.context-actions > .button, .notification-anchor > .button { min-width: var(--titlebar-control); min-height: var(--titlebar-control); padding: var(--space-half); }
+.context-actions svg { width: var(--icon-default); height: var(--icon-default); }
+.window-controls { display: flex; height: 100%; margin-left: var(--space-1); }
+.window-controls button {
+  display: grid;
+  place-items: center;
+  width: var(--window-control-width);
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  transition: var(--transition-control);
+}
+.window-controls svg { width: var(--window-control-icon); height: var(--window-control-icon); stroke-width: 1.25; }
+.window-controls button:is(:hover, [data-state~="hover"]) { background: var(--frame-hover); }
+.window-controls button.close:is(:hover, [data-state~="hover"]) { background: var(--window-close); color: var(--on-window-close); }
 .contextbar strong {
   color: var(--text);
 }
@@ -1131,7 +1161,7 @@ blockquote {
 @media (max-width: 720px) {
   .change-source { grid-template-columns: minmax(0, 1fr); }
   .change-source > .button { justify-self: start; }
-  .titlebar { grid-template-columns: var(--sidebar-compact) minmax(0, 1fr); height: auto; min-height: var(--header-height); }
+  .titlebar { grid-template-columns: var(--sidebar-compact) minmax(0, 1fr) auto; height: auto; min-height: var(--header-height); }
   .brand-name { display: none; }
   .app-brand { padding: 0; justify-content: center; }
   .contextbar { gap: var(--space-1); flex-wrap: wrap; }

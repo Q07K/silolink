@@ -11,7 +11,7 @@
     "beforeBundleCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/prepare-installer.ps1"
   },
   "app": {
-    "windows": [{ "label": "main", "title": "SiloLink", "width": 1320, "height": 900, "minWidth": 960, "minHeight": 640 }],
+    "windows": [{ "label": "main", "title": "SiloLink", "width": 1320, "height": 900, "minWidth": 960, "minHeight": 640, "decorations": false }],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost; font-src 'self'; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'self'; frame-src 'none'"
     }
