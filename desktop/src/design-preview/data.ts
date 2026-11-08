@@ -43,11 +43,39 @@ export function createPreviewSnapshot(scenario: PreviewScenario, theme: PreviewT
     occurredAt: earlier(index + 1), observedAt: earlier(index + 1),
     source: { provider: index % 2 ? "claude-code" : "codex", sessionId: `design-session-${index}`, itemId: String(index) },
   }));
+  // Eight weeks of earlier requests so the home overview shows a trend; broad requests thin out over time.
+  let seed = 7;
+  const random = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+  const pick = <T,>(items: readonly T[]) => items[Math.floor(random() * items.length)];
+  const hours = [10, 11, 14, 15, 16, 19, 20, 21, 21, 22, 22, 22, 23, 23, 0, 1];
+  const plain = ["설정 화면의 버튼 높이를 40px로 맞추고 항목 간격을 24px로 통일해줘.", "기록 목록에 날짜별 구분선을 넣고 오늘 항목을 먼저 보여줘.",
+    "수집 실패 알림에 원인과 다시 시도 버튼을 추가해줘.", "README의 설치 절차를 Windows 기준으로 다시 정리해줘.", "포트폴리오 카드에 사용한 기술을 배지로 보여줘."];
+  const broad = [["UI/UX 잘 적용해서 작업해줘.", "잘"], ["알아서 최적화 해줘.", "알아서"], ["화면을 깔끔하게 정리해줘.", "깔끔하게"]] as const;
+  const vague: Snapshot["analysis"]["ambiguousExpressions"] = [{ recordId: "design-record-3", projectId: "design-silolink", text: requests[3], phrases: ["깔끔하게"], status: "candidate" }];
+  ([[18, 0.36], [16, 0.34], [22, 0.3], [20, 0.25], [24, 0.2], [21, 0.15], [25, 0.1]] as const).forEach(([count, broadShare], age) => {
+    for (let n = 0; n < count; n += 1) {
+      const id = `design-history-${age}-${n}`;
+      const at = new Date(now.getTime() - (7 - age) * 7 * 86_400_000 + Math.floor(random() * 7) * 86_400_000);
+      at.setHours(pick(hours), Math.floor(random() * 60));
+      const isBroad = random() < broadShare;
+      const [text, phrase] = isBroad ? pick(broad) : [pick(plain), ""];
+      const projectId = random() < 0.75 ? "design-silolink" : "design-portfolio";
+      const roll = random();
+      snapshot.records.push({
+        id, revision: `${id}-r`, projectId, role: "user", text, occurredAt: at.toISOString(), observedAt: at.toISOString(),
+        source: { provider: roll < 0.57 ? "codex" : roll < 0.96 ? "claude-code" : "antigravity", sessionId: `${id}-s`, itemId: id },
+      });
+      if (isBroad) vague.push({ recordId: id, projectId, text, phrases: [phrase], status: "candidate" });
+    }
+  });
+  snapshot.records.sort((a, b) => (a.occurredAt ?? "").localeCompare(b.occurredAt ?? ""));
+  const providers: Record<string, number> = {};
+  snapshot.records.forEach((r) => { providers[r.source.provider] = (providers[r.source.provider] ?? 0) + 1; });
   snapshot.analysis = {
-    userRequests: requests.length, recordCount: requests.length, projectCount: 2, missingTimestamps: 0,
-    providers: { codex: 3, "claude-code": 3 }, method: "exact-text-and-expression-candidates",
+    userRequests: snapshot.records.length, requestIds: snapshot.records.map((r) => r.id), recordCount: snapshot.records.length,
+    projectCount: 2, missingTimestamps: 0, providers, method: "exact-text-and-expression-candidates",
     repeatedRequests: [{ text: requests[0], count: 3, recordIds: [0, 2, 4].map((id) => `design-record-${id}`), projectIds: ["design-silolink"] }],
-    ambiguousExpressions: [{ recordId: "design-record-3", projectId: "design-silolink", text: requests[3], phrases: ["깔끔하게"], status: "candidate" }],
+    ambiguousExpressions: vague,
   };
   snapshot.workspace.tasks = ([
     ["메뉴 구조와 화면 이름 검토", "디자인", "design-silolink", false],
@@ -63,7 +91,7 @@ export function createPreviewSnapshot(scenario: PreviewScenario, theme: PreviewT
     { id: "design-note-learning", kind: "learning", title: "메뉴를 사용자의 목적에 맞춰 묶기", body: "## 학습 메모\n기능 이름보다 사용자가 하려는 일에서 탐색을 시작합니다.\n\n- 내 작업: 현재 할 일과 회고\n- 지식 탐색: 기록·문서·조사·학습\n- 프로젝트 실행: 연결 상태와 변경 검토" },
     { id: "design-note-research", kind: "research", title: "화면의 정보 우선순위", body: "## 디자인 리뷰용 예시\n현황을 먼저 확인하고, 근거를 읽은 뒤 다음 행동을 선택할 수 있도록 배치합니다.\n\n수치 자체보다 원문과 맥락으로 이어지는 이동 경로를 검토합니다." },
     { id: "design-note-rule", kind: "rule", title: "변경 전 원문과 영향을 확인하기", body: "## 검토 기준\n1. 변경 이유를 설명합니다.\n2. 원문과 변경 후 내용을 함께 확인합니다.\n3. 적용한 뒤 실제 결과를 다시 살펴봅니다." },
-  ].map((note) => ({ ...note, projectId: "design-silolink", evidenceIds: ["design-record-0"], createdAt: earlier(3) }));
+  ].map((note, index) => ({ ...note, projectId: "design-silolink", evidenceIds: ["design-record-0"], createdAt: earlier([24 * 30, 3, 24 * 12][index]) }));
   snapshot.workspace.sources = [{
     id: "design-source", projectId: "design-silolink", title: "디자인 리뷰를 위한 참고 자료 예시",
     url: "https://example.com", kind: "community", claim: "화면에서 자주 쓰는 경로를 눈에 잘 띄게 배치한다.",
