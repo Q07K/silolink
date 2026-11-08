@@ -2,6 +2,7 @@ import { FolderPlus } from "lucide-react";
 import { mutate } from "../api";
 import { Actions, Button } from "../components";
 import { useWorkspace } from "../context";
+import { UsageOverview } from "../usage-overview";
 
 export function HomePage() {
   const { snapshot: s, navigate, setProjectId, perform } = useWorkspace();
@@ -20,19 +21,7 @@ export function HomePage() {
       ) : (
         <>
           <header className="heading"><h1>전체 프로젝트</h1><Button primary onClick={() => navigate("projects", "connect")}><FolderPlus />프로젝트 추가</Button></header>
-          <div className="overview-stats" aria-label="전체 프로젝트 현황">
-            {([
-              ["projects", "연결한 프로젝트", s.workspace.projects.length, "개"],
-              ["analysis", "나의 요청", s.analysis.userRequests, "건"],
-              ["analysis", "검토할 발견", (s.workspace.discoveries ?? []).filter((d) => d.status === "new").length, "개"],
-              ["work", "진행 중인 작업", openTasks.length, "개"],
-              ["docs", "저장한 기록", s.records.length, "건"],
-            ] as const).map(([target, label, count, unit]) => (
-              <button type="button" className="overview-stat" key={label} onClick={() => navigate(target, label === "검토할 발견" ? "discoveries" : "")}>
-                <span className="stat-label">{label}</span><strong>{count.toLocaleString()}<small>{unit}</small></strong>
-              </button>
-            ))}
-          </div>
+          <UsageOverview />
           <div className="home-workbench">
             <section className="home-projects">
               <div className="section-heading"><h2>프로젝트</h2><Button quiet onClick={() => navigate("projects")}>전체 보기</Button></div>
@@ -50,7 +39,7 @@ export function HomePage() {
             </section>
             <aside className="agenda">
               <section>
-                <div className="section-heading"><h2>진행 중인 작업</h2><Button quiet onClick={() => navigate("work")} aria-label="작업 전체 보기">전체 보기</Button></div>
+                <div className="section-heading"><h2>진행 중인 작업 <span className="muted">{openTasks.length}개</span></h2><Button quiet onClick={() => navigate("work")} aria-label={`진행 중인 작업 ${openTasks.length}개 전체 보기`}>전체 보기</Button></div>
                 {openTasks.slice(0, 5).map((task) => (
                   <label className="checkline" key={task.id}>
                     <input type="checkbox" checked={task.completed} onChange={() => void perform(() => mutate({ operation: "updateTask", id: task.id, completed: true, userTested: task.userTested }))} />

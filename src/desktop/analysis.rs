@@ -477,6 +477,8 @@ pub fn analyze_records(records: &[Value]) -> Value {
     terms.truncate(40);
     json!({
         "userRequests": requests.len(),
+        // Ids of the human requests above, oldest first, so views can bucket them by local time.
+        "requestIds": requests.iter().map(|r| r.record["id"].clone()).collect::<Vec<_>>(),
         "excludedRequests": excluded,
         "projectCount": projects.len(),
         "providers": providers,
@@ -608,6 +610,7 @@ mod tests {
         let analysis = analyze_records(&records);
         assert_eq!(analysis["userRequests"], 5);
         assert_eq!(analysis["excludedRequests"]["agent"], 1);
+        assert_eq!(analysis["requestIds"], json!(["1", "2", "3", "4", "5"]));
         let group = &analysis["repeatedRequests"][0];
         assert_eq!(
             (group["count"].as_u64(), group["match"].as_str()),

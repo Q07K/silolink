@@ -227,6 +227,7 @@ export interface Workspace {
 }
 export interface Analysis {
   userRequests: number;
+  requestIds?: string[];
   projectCount: number;
   recordCount: number;
   missingTimestamps: number;

@@ -78,6 +78,7 @@ it("홈은 전체 프로젝트의 미완료 작업 수를 보여 주고 작업 �
   }));
   vi.mocked(loadWorkspace).mockResolvedValue(snapshot);
   render(<App />);
+  expect(await screen.findByRole("heading", { name: "아직 볼 요청 기록이 없어요" })).toBeTruthy();
   fireEvent.click(await screen.findByRole("button", { name: /진행 중인 작업\s*2\s*개/ }));
   expect(await screen.findByRole("heading", { name: "작업과 다음 계획" })).toBeTruthy();
   expect(mutate).not.toHaveBeenCalled();
