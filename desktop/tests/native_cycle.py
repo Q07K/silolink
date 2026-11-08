@@ -158,7 +158,7 @@ with sync_playwright() as playwright:
         assert run['status'] == 'completed' and run['discoveryCount'] == 2 and run['rejectedCount'] == 1, run
         expect(page.get_by_text('근거가 맞지 않아 제외 1개', exact=False)).to_be_visible()
         term = card(page, '‘깔끔하게’의 뜻이 요청마다 다름')
-        expect(term.get_by_text('해석·추정', exact=True)).to_be_visible()
+        expect(term.get_by_text('추정', exact=True)).to_be_visible()
         checks.append('AI analysis through the CLI keeps cited discoveries, drops the uncited one, and labels interpretation')
 
         repeated = card(page, '같은 점검을 여러 번 요청함')

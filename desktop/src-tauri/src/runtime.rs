@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use serde_json::{Value, json};
 use silolink::{
-    desktop::{Desktop, Settings, Source, analyze_records},
+    desktop::{Desktop, Settings, Source, analyze_with},
     error::{Error, Result},
     project,
 };
@@ -114,7 +114,8 @@ impl Runtime {
                 Err(e) => collections.push(json!({"projectId":linked.id,"error":e.json()})),
             }
         }
-        let analysis = analyze_records(&records);
+        let detection = lock(&self.repository)?.detection();
+        let analysis = analyze_with(&records, &detection);
         // Deterministic discoveries are refreshed with every read; reviews are preserved.
         let added = crate::insight::refresh_local(self, &records, &analysis)?;
         if !added.is_empty() {
@@ -129,7 +130,7 @@ impl Runtime {
         }
         let data = lock(&self.repository)?.data.clone();
         Ok(
-            json!({"workspace":data,"defaultStateDirectory":self.default_state_directory,"inventories":inventories,"collections":collections,"records":records,"analysis":analysis,"projectConnectionErrors":connection_errors,"loadedAt":project::now()}),
+            json!({"workspace":data,"defaultStateDirectory":self.default_state_directory,"inventories":inventories,"collections":collections,"records":records,"analysis":analysis,"projectConnectionErrors":connection_errors,"defaultDelegationPhrases":silolink::desktop::detection::DELEGATION_PHRASES,"loadedAt":project::now()}),
         )
     }
     pub fn sync_projects(&self) -> Result<bool> {
@@ -264,6 +265,10 @@ pub enum Mutation {
         #[serde(default)]
         correction: Option<String>,
     },
+    MarkRequest {
+        record_id: String,
+        intentional: bool,
+    },
     Source {
         source: Source,
     },
@@ -323,6 +328,13 @@ pub fn mutate(runtime: &Runtime, request: Mutation) -> Result<Value> {
             correction,
         } => {
             repo.review_discovery(&id, &status, correction.as_deref())?;
+            None
+        }
+        Mutation::MarkRequest {
+            record_id,
+            intentional,
+        } => {
+            repo.mark_request(&record_id, intentional)?;
             None
         }
         Mutation::Source { source } => Some(repo.add_source(source)?),

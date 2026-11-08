@@ -1314,3 +1314,7 @@ blockquote {
   .viz-hero, .viz-pattern-grid { grid-template-columns: 1fr; }
   .viz-tiles { grid-template-columns: 1fr; }
 }
+.phrase-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 var(--space-3); margin-bottom: var(--space-2); }
+.phrase-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-1); min-height: 44px; border-bottom: 1px solid var(--border); font-size: var(--font-body); }
+.phrase-row small { margin-left: var(--space-1); color: var(--muted); font-size: var(--font-caption); }
+.phrase-add { display: flex; align-items: flex-end; gap: var(--space-1); margin-top: var(--space-2); }

@@ -37,6 +37,8 @@ export interface Settings {
   theme: "system" | "light" | "dark";
   autoAnalysis?: boolean;
   analysisProvider?: "codex" | "claude";
+  delegationPhrasesAdded?: string[];
+  delegationPhrasesRemoved?: string[];
 }
 export interface Project {
   id: string;
@@ -127,6 +129,8 @@ export interface EstimateResult {
   references: { taskId: string; title: string; projectId: string; phase: string; minutes: number; userTested: boolean; similarity: number }[];
   changed: boolean;
 }
+/** Evidence state shown on every claim: seen in records, inferred, ambiguous, or unverified. */
+export type Basis = "observed" | "inferred" | "ambiguous" | "unverified";
 export interface Evidence {
   recordId: string;
   projectId: string;
@@ -147,7 +151,7 @@ export interface Discovery {
   kind: DiscoveryKind;
   title: string;
   summary: string;
-  basis: "observed" | "inferred";
+  basis: Basis;
   projectIds: string[];
   evidence: Evidence[];
   suggestedAction: "learn" | "research" | "rule" | "task" | "none";
@@ -224,6 +228,27 @@ export interface Workspace {
   notices: Notice[];
   discoveries?: Discovery[];
   analysisRuns?: AnalysisRun[];
+  requestMarks?: { recordId: string; kind: string; createdAt: string }[];
+}
+/** Working stage of a request; exploration requests are not judged by execution criteria. */
+export type RequestStage = "explore" | "diagnose" | "execute" | "verify" | "other";
+/** Why a request looks broadly delegated: wording, or what happened in the conversation after it. */
+export interface RequestSignal {
+  kind: "outcome" | "expression";
+  type: "clarification" | "correction" | "retry" | "phrase" | "area-only";
+  reason: string;
+  recordId: string;
+  quote: string;
+}
+export interface RequestCandidate {
+  recordId: string;
+  projectId: string;
+  provider: string;
+  occurredAt: string | null;
+  text: string;
+  stage: RequestStage;
+  basis: Basis;
+  signals: RequestSignal[];
 }
 export interface Analysis {
   userRequests: number;
@@ -244,6 +269,9 @@ export interface Analysis {
     firstAt?: string | null;
     lastAt?: string | null;
   }[];
+  requestSignals?: RequestCandidate[];
+  stages?: Partial<Record<RequestStage, number>>;
+  intentionalRequests?: number;
   ambiguousExpressions: {
     recordId: string;
     projectId: string;
@@ -254,6 +282,8 @@ export interface Analysis {
 }
 export interface Snapshot {
   defaultStateDirectory: string;
+  /** The built-in delegation phrase dictionary, before the user's additions and removals. */
+  defaultDelegationPhrases?: string[];
   projectConnectionErrors?: { registration: string; error: NativeError }[];
   workspace: Workspace;
   inventories: Inventory[];
@@ -326,6 +356,7 @@ export type Mutation =
     }
   | { operation: "noteStatus"; id: string; status: "open" | "applying" | "done" | "held" }
   | { operation: "reviewDiscovery"; id: string; status: DiscoveryStatus; correction?: string | null }
+  | { operation: "markRequest"; recordId: string; intentional: boolean }
   | { operation: "source"; source: Source }
   | { operation: "addTask"; projectId: string; title: string; phase: string; originId?: string }
   | {

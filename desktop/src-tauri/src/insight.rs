@@ -1,7 +1,7 @@
 use crate::runtime::{Runtime, error, lock};
 use serde_json::{Value, json};
 use silolink::{
-    desktop::{analyze_records, discovery, project_report, rules},
+    desktop::{analyze_with, discovery, project_report, rules},
     error::Result,
     project,
 };
@@ -300,7 +300,7 @@ pub fn report(runtime: &Runtime, project_id: &str) -> Result<String> {
     let repo = lock(&runtime.repository)?;
     let project = repo.project(project_id)?;
     let inventory = silolink::documents::scan(&project).ok();
-    let analysis = analyze_records(&records);
+    let analysis = analyze_with(&records, &repo.detection());
     Ok(project_report(
         &repo.data,
         project_id,
@@ -318,6 +318,7 @@ pub fn report(runtime: &Runtime, project_id: &str) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use silolink::desktop::analyze_records;
     #[test]
     fn compares_rules_across_projects_and_plans_an_append() {
         let profile = tempfile::TempDir::new().unwrap();
@@ -377,6 +378,29 @@ mod tests {
         )
         .unwrap();
         assert!(created["operations"][0]["expectedRevision"].is_null());
+    }
+    #[test]
+    fn mark_request_mutation_is_stored_and_feeds_detection() {
+        let profile = tempfile::TempDir::new().unwrap();
+        let runtime = Runtime::open(profile.path(), profile.path().join("Data")).unwrap();
+        let request: crate::runtime::Mutation = serde_json::from_value(
+            json!({"operation":"markRequest","recordId":"r1","intentional":true}),
+        )
+        .unwrap();
+        crate::runtime::mutate(&runtime, request).unwrap();
+        {
+            let repo = lock(&runtime.repository).unwrap();
+            assert_eq!(repo.data.request_marks[0].record_id, "r1");
+            assert!(repo.detection().intentional.contains("r1"));
+        }
+        let snapshot = runtime.snapshot().unwrap();
+        assert!(
+            snapshot["defaultDelegationPhrases"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|p| p == "깔끔하게")
+        );
     }
     #[test]
     fn local_discoveries_keep_reviews_and_are_announced_once() {

@@ -1,9 +1,11 @@
 mod analysis;
+pub mod detection;
 pub mod discovery;
 mod export;
 pub mod planning;
 pub mod rules;
-pub use analysis::{analyze_records, human_requests, request_view, similarity};
+pub use analysis::{analyze_records, analyze_with, human_requests, request_view, similarity};
+pub use detection::Detection;
 pub use discovery::{AnalysisRun, Discovery};
 pub use export::{project_report, write_report};
 pub use planning::Estimate;
@@ -37,6 +39,9 @@ pub struct Settings {
     /// Runs model analysis after background collection; it uses the user's CLI quota.
     pub auto_analysis: bool,
     pub analysis_provider: String,
+    /// Delegation phrases the user added to, or removed from, the detection dictionary.
+    pub delegation_phrases_added: Vec<String>,
+    pub delegation_phrases_removed: Vec<String>,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -51,6 +56,8 @@ impl Default for Settings {
             theme: "system".into(),
             auto_analysis: false,
             analysis_provider: "codex".into(),
+            delegation_phrases_added: vec![],
+            delegation_phrases_removed: vec![],
         }
     }
 }
@@ -156,6 +163,14 @@ pub struct Notice {
     pub created_at: String,
     pub read: bool,
 }
+/// A user's note on one request; "intentional" keeps it out of broad-request candidates.
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RequestMark {
+    pub record_id: String,
+    pub kind: String,
+    pub created_at: String,
+}
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct DesktopData {
@@ -170,6 +185,7 @@ pub struct DesktopData {
     pub seen_discoveries: Vec<String>,
     pub discoveries: Vec<Discovery>,
     pub analysis_runs: Vec<AnalysisRun>,
+    pub request_marks: Vec<RequestMark>,
 }
 impl Default for DesktopData {
     fn default() -> Self {
@@ -185,6 +201,7 @@ impl Default for DesktopData {
             seen_discoveries: vec![],
             discoveries: vec![],
             analysis_runs: vec![],
+            request_marks: vec![],
         }
     }
 }
@@ -276,11 +293,59 @@ impl Desktop {
         self.data = next;
         Ok(())
     }
-    pub fn save_settings(&mut self, settings: Settings) -> Result<()> {
+    pub fn save_settings(&mut self, mut settings: Settings) -> Result<()> {
+        for list in [
+            &mut settings.delegation_phrases_added,
+            &mut settings.delegation_phrases_removed,
+        ] {
+            let mut seen = std::collections::BTreeSet::new();
+            *list = list
+                .iter()
+                .map(|p| p.trim().to_owned())
+                .filter(|p| seen.insert(p.clone()))
+                .collect();
+        }
         validate_settings(&settings)?;
         let mut next = self.data.clone();
         next.settings = settings;
         self.commit(next)
+    }
+    /// Marks a request as intentionally broad, or clears the mark; marking twice keeps one.
+    pub fn mark_request(&mut self, record_id: &str, intentional: bool) -> Result<()> {
+        if record_id.is_empty() || record_id.len() > 200 {
+            return Err(invalid("Choose a request to mark."));
+        }
+        let marked = self
+            .data
+            .request_marks
+            .iter()
+            .any(|m| m.record_id == record_id);
+        if marked == intentional {
+            return Ok(());
+        }
+        let mut next = self.data.clone();
+        if intentional {
+            next.request_marks.push(RequestMark {
+                record_id: record_id.into(),
+                kind: "intentional".into(),
+                created_at: project::now(),
+            });
+        } else {
+            next.request_marks.retain(|m| m.record_id != record_id);
+        }
+        self.commit(next)
+    }
+    /// The detection dictionary and marks this workspace's analysis should use.
+    pub fn detection(&self) -> Detection {
+        Detection::with_dictionary(
+            &self.data.settings.delegation_phrases_added,
+            &self.data.settings.delegation_phrases_removed,
+            self.data
+                .request_marks
+                .iter()
+                .filter(|m| m.kind == "intentional")
+                .map(|m| m.record_id.clone()),
+        )
     }
     pub fn connect(&mut self, root: &Path, initialize: bool) -> Result<String> {
         let project = if initialize {
@@ -894,6 +959,20 @@ fn validate_settings(settings: &Settings) -> Result<()> {
         return Err(invalid(
             "Invalid review time, timezone, theme, interval, or storage location.",
         ));
+    }
+    for list in [
+        &settings.delegation_phrases_added,
+        &settings.delegation_phrases_removed,
+    ] {
+        if list.len() > 100
+            || list
+                .iter()
+                .any(|p| p.trim().is_empty() || p.chars().count() > 40)
+        {
+            return Err(invalid(
+                "Delegation phrases must be 1-40 characters, at most 100 per list.",
+            ));
+        }
     }
     Ok(())
 }

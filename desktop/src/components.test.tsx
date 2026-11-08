@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { Badge, Button, Dialog, Field, Toast } from "./components";
+import { Badge, BasisBadge, Button, Dialog, Field, Toast } from "./components";
 
 afterEach(cleanup);
 
@@ -114,4 +114,17 @@ it("대화상자는 제목으로 이름이 붙고 Escape나 닫기로 닫힌다"
   expect(close).toHaveBeenCalledTimes(1);
   fireEvent.click(screen.getByRole("button", { name: "대화상자 닫기" }));
   expect(close).toHaveBeenCalledTimes(2);
+});
+
+it("근거 표시는 네 가지 상태를 같은 이름으로 보여 준다", () => {
+  render(<>
+    <BasisBadge basis="observed" />
+    <BasisBadge basis="inferred" />
+    <BasisBadge basis="ambiguous" />
+    <BasisBadge basis="unverified" />
+  </>);
+  expect(screen.getByText("기록에서 확인").className).toBe("badge success");
+  expect(screen.getByText("추정").className).toBe("badge");
+  expect(screen.getByText("모호").className).toBe("badge warning");
+  expect(screen.getByText("미확인").className).toBe("badge");
 });

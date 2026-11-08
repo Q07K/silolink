@@ -60,7 +60,7 @@ async function openAnalysis() {
 
 it("발견은 근거 원문과 해석 여부를 보여주고 검토 결과와 후속 작업을 발견에 연결한다", async () => {
   const card = await openAnalysis();
-  expect(within(card).getByText("해석·추정")).toBeTruthy();
+  expect(within(card).getByText("추정")).toBeTruthy();
   expect(within(card).getByText("화면 깔끔하게 해줘")).toBeTruthy();
   fireEvent.click(within(card).getByRole("button", { name: "타당함" }));
   await waitFor(() => expect(vi.mocked(mutate)).toHaveBeenCalledWith({ operation: "reviewDiscovery", id: "d1", status: "accepted", correction: null }));

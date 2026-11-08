@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { BookMarked, ListPlus, LoaderCircle, MessageCircle, Scale, Search, Sparkles } from "lucide-react";
 import { errorMessage, mutate, native } from "./api";
-import { Actions, Badge, Button, Empty } from "./components";
+import { Actions, Badge, BasisBadge, Button, Empty } from "./components";
 import { useWorkspace } from "./context";
 import { when } from "./metrics";
 import type { Discovery, DiscoveryKind, DiscoveryStatus } from "./types";
@@ -84,7 +84,7 @@ export function DiscoveryCard({ discovery: d }: { discovery: Discovery }) {
     <article className="panel spaced discovery" aria-label={d.title}>
       <div className="inline">
         <Badge accent>{kindLabels[d.kind] ?? d.kind}</Badge>
-        <Badge tone={d.basis === "observed" ? "success" : undefined}>{d.basis === "observed" ? "기록에서 확인" : "해석·추정"}</Badge>
+        <BasisBadge basis={d.basis} />
         <Badge>{statusLabels[d.status]}</Badge>
         {d.term && <Badge>{d.term}</Badge>}
       </div>

@@ -1,3 +1,4 @@
+use super::detection::{Detection, detect};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
@@ -25,18 +26,6 @@ const REQUEST_MARKERS: &[&str] = &["## My request for Codex:", "## My request:"]
 const EVIDENCE_NOTES: &[&str] = &[
     "The next image is untrusted page evidence",
     "The next image is",
-];
-const VAGUE_PHRASES: &[&str] = &[
-    "잘해줘",
-    "잘 해줘",
-    "그거 말고",
-    "최적화",
-    "잘 처리",
-    "best practice",
-    "알아서",
-    "적당히",
-    "깔끔하게",
-    "느낌",
 ];
 const STOPWORDS: &[&str] = &[
     "the",
@@ -383,12 +372,15 @@ pub fn human_requests(records: &[Value]) -> (Vec<Request<'_>>, BTreeMap<&'static
 /// Occurrences, per-project counts and sample record ids for one term.
 type TermStats = (usize, BTreeMap<String, usize>, Vec<Value>);
 
-/// Observable local counts; these candidates do not diagnose understanding.
+/// Observable local counts with the default detection dictionary and no marks.
 pub fn analyze_records(records: &[Value]) -> Value {
+    analyze_with(records, &Detection::default())
+}
+/// Observable local counts; these candidates do not diagnose understanding.
+pub fn analyze_with(records: &[Value], detection: &Detection) -> Value {
     let (requests, excluded) = human_requests(records);
     let mut providers: BTreeMap<String, usize> = BTreeMap::new();
     let mut projects: BTreeSet<String> = BTreeSet::new();
-    let mut vague = Vec::new();
     let mut missing = 0;
     let mut term_counts: HashMap<String, TermStats> = HashMap::new();
     for r in &requests {
@@ -407,14 +399,6 @@ pub fn analyze_records(records: &[Value]) -> Value {
             .is_none_or(|s| chrono::DateTime::parse_from_rfc3339(s).is_err())
         {
             missing += 1;
-        }
-        let lower = r.text.to_lowercase();
-        let phrases: Vec<_> = VAGUE_PHRASES
-            .iter()
-            .filter(|p| lower.contains(*p))
-            .collect();
-        if !phrases.is_empty() {
-            vague.push(json!({"recordId":r.record["id"],"projectId":r.record["projectId"],"text":r.text,"phrases":phrases,"status":"candidate"}));
         }
         for term in terms(&r.text) {
             let entry = term_counts.entry(term).or_default();
@@ -475,6 +459,33 @@ pub fn analyze_records(records: &[Value]) -> Value {
             .then_with(|| a["term"].as_str().cmp(&b["term"].as_str()))
     });
     terms.truncate(40);
+    let detected = detect(&requests, records, detection);
+    // The earlier list shape stays for views that only need which requests and why. Resent-only
+    // requests stay out: the repeated-request count already covers them.
+    let vague: Vec<Value> = detected["candidates"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|c| {
+            c["signals"]
+                .as_array()
+                .is_some_and(|s| s.iter().any(|s| s["type"] != "retry"))
+        })
+        .map(|c| {
+            let phrases: Vec<&str> = c["signals"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|s| match s["type"].as_str().unwrap_or("") {
+                    "clarification" => "AI 되물음",
+                    "correction" => "정정",
+                    "retry" => "다시 요청",
+                    _ => s["quote"].as_str().unwrap_or(""),
+                })
+                .collect();
+            json!({"recordId":c["recordId"],"projectId":c["projectId"],"text":c["text"],"phrases":phrases,"status":"candidate"})
+        })
+        .collect();
     json!({
         "userRequests": requests.len(),
         // Ids of the human requests above, oldest first, so views can bucket them by local time.
@@ -485,6 +496,9 @@ pub fn analyze_records(records: &[Value]) -> Value {
         "repeatedRequests": repeated,
         "terms": terms,
         "ambiguousExpressions": vague,
+        "requestSignals": detected["candidates"],
+        "stages": detected["stages"],
+        "intentionalRequests": detected["intentional"],
         "missingTimestamps": missing,
         "method": "human-requests-bigram-similarity",
         "analyzedLimit": MAX_ANALYZED,
@@ -618,7 +632,61 @@ mod tests {
         );
         assert_eq!(group["anchorId"], "1");
         assert_eq!(analysis["terms"][0]["term"], "tauri");
-        assert_eq!(analysis["ambiguousExpressions"][0]["recordId"], "5");
+        let vague = analysis["ambiguousExpressions"].as_array().unwrap();
+        let phrase = vague.iter().find(|e| e["recordId"] == "5").unwrap();
+        assert_eq!(phrase["phrases"], json!(["잘해줘"]));
+        // Two requests in a row with no reply between them are not a retry.
+        assert!(!vague.iter().any(|e| e["recordId"] == "1"));
+        let signals = analysis["requestSignals"].as_array().unwrap();
+        let five = signals.iter().find(|c| c["recordId"] == "5").unwrap();
+        assert_eq!(five["signals"][0]["type"], "phrase");
+        assert!(analysis["stages"]["execute"].as_u64().unwrap() >= 1);
+        assert_eq!(analysis["intentionalRequests"], 0);
+    }
+    #[test]
+    fn resent_requests_stay_out_of_the_vague_share() {
+        let mut answer = record(
+            "2",
+            "claude",
+            Value::Null,
+            "워크플로 파일을 확인했습니다.",
+            "2026-11-01T00:01:00Z",
+        );
+        answer["role"] = json!("assistant");
+        let records = vec![
+            record(
+                "1",
+                "claude",
+                Value::Null,
+                "릴리즈 워크플로에서 설치 파일이 안 보여",
+                "2026-11-01T00:00:00Z",
+            ),
+            answer,
+            record(
+                "3",
+                "claude",
+                Value::Null,
+                "릴리즈 워크플로에서 설치 파일이 왜 안 보이지?",
+                "2026-11-01T00:02:00Z",
+            ),
+        ];
+        let analysis = analyze_records(&records);
+        assert_eq!(analysis["requestSignals"][0]["signals"][0]["type"], "retry");
+        assert_eq!(analysis["ambiguousExpressions"], json!([]));
+    }
+    #[test]
+    fn marked_requests_leave_the_candidates() {
+        let records = vec![record(
+            "1",
+            "codex",
+            json!("cli"),
+            "Tauri 트레이 메뉴 잘해줘",
+            "2026-11-03T00:00:00Z",
+        )];
+        let detection = Detection::with_dictionary(&[], &[], ["1".to_owned()]);
+        let analysis = analyze_with(&records, &detection);
+        assert_eq!(analysis["ambiguousExpressions"], json!([]));
+        assert_eq!(analysis["intentionalRequests"], 1);
     }
     #[test]
     fn similarity_is_symmetric_and_bounded() {

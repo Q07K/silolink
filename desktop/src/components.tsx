@@ -2,6 +2,7 @@ import {
   ChevronDown, ChevronRight, CircleAlert, CircleCheck, FolderPlus, Inbox, Info, LoaderCircle, MessageCircle, TriangleAlert, X,
 } from "lucide-react";
 import type { ReactNode, ComponentPropsWithRef, Ref } from "react";
+import type { Basis } from "./types";
 import { cloneElement, isValidElement, useEffect, useId, useRef } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -52,6 +53,17 @@ export function Badge({
 }) {
   const variant = tone ?? (accent ? "accent" : "");
   return <span className={variant ? `badge ${variant}` : "badge"}>{children}</span>;
+}
+const basisLabels: Record<Basis, [string, Tone | undefined]> = {
+  observed: ["기록에서 확인", "success"],
+  inferred: ["추정", undefined],
+  ambiguous: ["모호", "warning"],
+  unverified: ["미확인", undefined],
+};
+/** The evidence state every claim carries (PRD 5절): seen in records, inferred, ambiguous, or unverified. */
+export function BasisBadge({ basis }: { basis: Basis }) {
+  const [label, tone] = basisLabels[basis] ?? basisLabels.unverified;
+  return <Badge tone={tone}>{label}</Badge>;
 }
 export function Heading({
   title,

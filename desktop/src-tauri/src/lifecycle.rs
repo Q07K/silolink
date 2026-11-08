@@ -103,7 +103,8 @@ pub async fn background(app: AppHandle, runtime: Arc<Runtime>) {
         let ids: Vec<String> = data.projects.iter().map(|p| p.id.clone()).collect();
         if let Ok(Ok(items)) = tauri::async_runtime::spawn_blocking(move || {
             let (records, _) = crate::insight::records_for(&rt, &ids)?;
-            let analysis = silolink::desktop::analyze_records(&records);
+            let detection = crate::runtime::lock(&rt.repository)?.detection();
+            let analysis = silolink::desktop::analyze_with(&records, &detection);
             crate::insight::refresh_local(&rt, &records, &analysis)
         })
         .await

@@ -1,6 +1,7 @@
 """Verify the local design-only Vite server with Edge; requires npm run design."""
 from pathlib import Path
 import json
+import re
 import uuid
 from playwright.sync_api import sync_playwright, expect
 
@@ -287,7 +288,7 @@ with sync_playwright() as playwright:
         page.get_by_role('tab', name='도구별 기록', exact=True).click()
         expect_footer_action(page.get_by_role('button', name='이 맥락으로 질문', exact=True).first, 'message-circle')
         nav.get_by_role('button', name='사용 분석', exact=True).click()
-        page.get_by_role('tab', name='표현 후보', exact=True).click()
+        page.get_by_role('tab', name=re.compile(r'^넓게 맡긴 요청 \d+$')).click()
         expect_footer_action(page.get_by_role('button', name='개념과 요청을 함께 다듬기', exact=True).first, 'message-circle')
         expect_footer_action(page.get_by_role('button', name='해석 수정의 근거로 선택', exact=True).first, 'clipboard-list')
         nav.get_by_role('button', name='프로젝트', exact=True).click()
