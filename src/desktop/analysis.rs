@@ -460,11 +460,17 @@ pub fn analyze_with(records: &[Value], detection: &Detection) -> Value {
     });
     terms.truncate(40);
     let detected = detect(&requests, records, detection);
-    // The earlier list shape stays for views that only need which requests and why.
+    // The earlier list shape stays for views that only need which requests and why. Resent-only
+    // requests stay out: the repeated-request count already covers them.
     let vague: Vec<Value> = detected["candidates"]
         .as_array()
         .into_iter()
         .flatten()
+        .filter(|c| {
+            c["signals"]
+                .as_array()
+                .is_some_and(|s| s.iter().any(|s| s["type"] != "retry"))
+        })
         .map(|c| {
             let phrases: Vec<&str> = c["signals"]
                 .as_array()
@@ -629,13 +635,44 @@ mod tests {
         let vague = analysis["ambiguousExpressions"].as_array().unwrap();
         let phrase = vague.iter().find(|e| e["recordId"] == "5").unwrap();
         assert_eq!(phrase["phrases"], json!(["잘해줘"]));
-        let resent = vague.iter().find(|e| e["recordId"] == "1").unwrap();
-        assert_eq!(resent["phrases"], json!(["다시 요청"]));
+        // Two requests in a row with no reply between them are not a retry.
+        assert!(!vague.iter().any(|e| e["recordId"] == "1"));
         let signals = analysis["requestSignals"].as_array().unwrap();
         let five = signals.iter().find(|c| c["recordId"] == "5").unwrap();
         assert_eq!(five["signals"][0]["type"], "phrase");
         assert!(analysis["stages"]["execute"].as_u64().unwrap() >= 1);
         assert_eq!(analysis["intentionalRequests"], 0);
+    }
+    #[test]
+    fn resent_requests_stay_out_of_the_vague_share() {
+        let mut answer = record(
+            "2",
+            "claude",
+            Value::Null,
+            "워크플로 파일을 확인했습니다.",
+            "2026-11-01T00:01:00Z",
+        );
+        answer["role"] = json!("assistant");
+        let records = vec![
+            record(
+                "1",
+                "claude",
+                Value::Null,
+                "릴리즈 워크플로에서 설치 파일이 안 보여",
+                "2026-11-01T00:00:00Z",
+            ),
+            answer,
+            record(
+                "3",
+                "claude",
+                Value::Null,
+                "릴리즈 워크플로에서 설치 파일이 왜 안 보이지?",
+                "2026-11-01T00:02:00Z",
+            ),
+        ];
+        let analysis = analyze_records(&records);
+        assert_eq!(analysis["requestSignals"][0]["signals"][0]["type"], "retry");
+        assert_eq!(analysis["ambiguousExpressions"], json!([]));
     }
     #[test]
     fn marked_requests_leave_the_candidates() {

@@ -97,17 +97,23 @@ const ASKING: &[&str] = &[
     "do you want",
     "could you clarify",
 ];
-const OFFERS: &[&str] = &["할까요?", "드릴까요?", "want me to"];
-const CORRECTIONS: &[&str] = &[
-    "그거 말고",
-    "그게 아니라",
-    "그 말이 아니라",
-    "아니 ",
-    "아니요",
-    "내 말은",
+/// Offers made after finishing the work ("원하시면 … 드릴까요?"); they ask nothing about the request.
+const OFFERS: &[&str] = &[
+    "원하시면",
+    "원하면",
+    "필요하시면",
+    "필요하면",
+    "드릴까요",
+    "if you want",
+    "if you'd like",
+    "want me to",
 ];
+const CORRECTIONS: &[&str] = &["그거 말고", "그게 아니라", "그 말이 아니라", "내 말은"];
+/// A bare "no" corrects the AI only when its reply did not end by asking something.
+const REFUSALS: &[&str] = &["아니요", "아니 "];
+/// Korean compounds that contain an area word without being about that area.
+const KOREAN_COMPOUNDS: &[&str] = &["구조체"];
 const AREA_LIMIT: usize = 40;
-const LONG_REPLY: usize = 600;
 const RETRY_SIMILARITY: f64 = 0.55;
 
 /// The phrase dictionary in use and the requests the user marked as intentionally broad.
@@ -145,13 +151,26 @@ impl Detection {
     }
 }
 
+/// True when `word` occurs in `text`; ASCII words must stand alone ("UI" is not in "build").
+fn contains_word(text: &str, word: &str) -> bool {
+    if !word.is_ascii() {
+        return text.contains(word);
+    }
+    text.match_indices(word).any(|(at, _)| {
+        let before = text[..at].chars().next_back();
+        let after = text[at + word.len()..].chars().next();
+        !before.is_some_and(|c| c.is_ascii_alphanumeric())
+            && !after.is_some_and(|c| c.is_ascii_alphanumeric())
+    })
+}
+
 /// The working stage a request is in; the first matching stage wins.
 pub fn stage(text: &str) -> &'static str {
     let lower = text.to_lowercase();
     let trimmed = lower.trim_end();
     for (name, cues) in STAGES {
         if (*name == "explore" && (trimmed.ends_with('?') || trimmed.ends_with('？')))
-            || cues.iter().any(|cue| lower.contains(cue))
+            || cues.iter().any(|cue| contains_word(&lower, cue))
         {
             return name;
         }
@@ -170,11 +189,22 @@ fn clip(text: &str, limit: usize) -> String {
         format!("{}…", flat.chars().take(limit).collect::<String>())
     }
 }
+/// The first area word in the request, matched case-insensitively as a whole word.
+fn area_in(text: &str) -> Option<&'static str> {
+    let mut lower = text.to_lowercase();
+    for compound in KOREAN_COMPOUNDS {
+        lower = lower.replace(compound, " ");
+    }
+    AREA_WORDS
+        .iter()
+        .find(|a| contains_word(&lower, &a.to_lowercase()))
+        .copied()
+}
 /// True when the words around the area name pin nothing down: no numbers, quotes, paths or code names.
 fn unspecific(text: &str) -> bool {
-    let mut rest = text.to_owned();
+    let mut rest = text.to_lowercase();
     for area in AREA_WORDS {
-        rest = rest.replace(area, " ");
+        rest = rest.replace(&area.to_lowercase(), " ");
     }
     if rest
         .chars()
@@ -182,16 +212,18 @@ fn unspecific(text: &str) -> bool {
     {
         return false;
     }
-    !rest.split_whitespace().any(|word| {
-        let chars: Vec<char> = word.chars().collect();
-        let file = word.rsplit_once('.').is_some_and(|(stem, ext)| {
+    let file = rest.split_whitespace().any(|word| {
+        word.rsplit_once('.').is_some_and(|(stem, ext)| {
             !stem.is_empty() && !ext.is_empty() && ext.chars().all(|c| c.is_ascii_alphabetic())
-        });
-        let camel = chars
+        })
+    });
+    let camel = text.split_whitespace().any(|word| {
+        let chars: Vec<char> = word.chars().collect();
+        chars
             .windows(2)
-            .any(|w| w[0].is_ascii_lowercase() && w[1].is_ascii_uppercase());
-        file || camel
-    })
+            .any(|w| w[0].is_ascii_lowercase() && w[1].is_ascii_uppercase())
+    });
+    !(file || camel)
 }
 fn expression_signals(request: &Request, detection: &Detection) -> Vec<Value> {
     let lower = request.text.to_lowercase();
@@ -211,9 +243,7 @@ fn expression_signals(request: &Request, detection: &Detection) -> Vec<Value> {
     }
     if request.text.chars().count() <= AREA_LIMIT
         && unspecific(&request.text)
-        && let Some(area) = AREA_WORDS
-            .iter()
-            .find(|a| lower.contains(&a.to_lowercase()))
+        && let Some(area) = area_in(&request.text)
     {
         found.push(signal(
             "expression",
@@ -225,26 +255,53 @@ fn expression_signals(request: &Request, detection: &Detection) -> Vec<Value> {
     }
     found
 }
+/// The reply's prose: fenced and inline code removed, so `?` in code is not a question.
+fn without_code(reply: &str) -> String {
+    let mut prose = String::new();
+    for (index, block) in reply.split("```").enumerate() {
+        if index % 2 == 0 {
+            for (part, text) in block.split('`').enumerate() {
+                if part % 2 == 0 {
+                    prose.push_str(text);
+                }
+            }
+            prose.push('\n');
+        }
+    }
+    prose
+}
+/// The question a reply ends with, or `None` when it ends otherwise.
+fn final_question(reply: &str) -> Option<String> {
+    let prose = without_code(reply);
+    let chars: Vec<char> = prose.trim_end().chars().collect();
+    if !matches!(chars.last(), Some('?' | '？')) {
+        return None;
+    }
+    let end = chars.len() - 1;
+    // A period ends a sentence only before a space, so "App.tsx" stays in one piece.
+    let start = (0..end)
+        .rev()
+        .find(|&i| {
+            matches!(chars[i], '!' | '\n' | '?' | '？')
+                || (chars[i] == '.' && chars.get(i + 1).is_some_and(|c| c.is_whitespace()))
+        })
+        .map_or(0, |i| i + 1);
+    Some(
+        chars[start..=end]
+            .iter()
+            .collect::<String>()
+            .trim()
+            .to_owned(),
+    )
+}
 /// The asking sentence that ends a reply, or `None` when the reply does not ask the user to choose.
 fn clarifying_question(reply: &str) -> Option<String> {
-    let chars: Vec<char> = reply.chars().collect();
-    let tail: Vec<char> = chars[chars.len().saturating_sub(400)..].to_vec();
-    let end = tail.iter().rposition(|c| matches!(c, '?' | '？'))?;
-    let start = tail[..end]
-        .iter()
-        .rposition(|c| matches!(c, '.' | '!' | '\n' | '?' | '？'))
-        .map_or(0, |i| i + 1);
-    let question: String = tail[start..=end].iter().collect();
-    let question = question.trim();
-    let lower = tail.iter().collect::<String>().to_lowercase();
-    if !ASKING.iter().any(|cue| lower.contains(cue)) {
+    let question = final_question(reply)?;
+    let lower = question.to_lowercase();
+    if !ASKING.iter().any(|cue| lower.contains(cue)) || OFFERS.iter().any(|o| lower.contains(o)) {
         return None;
     }
-    let asked = question.to_lowercase();
-    if chars.len() > LONG_REPLY && OFFERS.iter().any(|o| asked.contains(o)) {
-        return None;
-    }
-    Some(clip(question, 160))
+    Some(clip(&question, 160))
 }
 
 enum Turn<'a> {
@@ -261,7 +318,11 @@ fn outcome_signals<'a>(
         .filter_map(|r| r.record["id"].as_str().map(|id| (id, r)))
         .collect();
     let mut sessions: BTreeMap<(&str, &str), Vec<&Value>> = BTreeMap::new();
-    for record in records {
+    // Records without a time cannot be placed in the conversation, so they are not linked.
+    for record in records
+        .iter()
+        .filter(|r| r["occurredAt"].as_str().is_some_and(|at| !at.is_empty()))
+    {
         let source = &record["source"];
         let key = (
             source["provider"].as_str().unwrap_or(""),
@@ -271,12 +332,8 @@ fn outcome_signals<'a>(
     }
     let mut found: HashMap<&str, Vec<Value>> = HashMap::new();
     for list in sessions.values_mut() {
-        list.sort_by(|a, b| {
-            a["occurredAt"]
-                .as_str()
-                .unwrap_or("")
-                .cmp(b["occurredAt"].as_str().unwrap_or(""))
-        });
+        // Codex items of one turn share the turn's start time; the request comes before its replies.
+        list.sort_by_key(|r| (r["occurredAt"].as_str().unwrap_or(""), r["role"] != "user"));
         let turns: Vec<Turn> = list
             .iter()
             .filter_map(|record| match record["role"].as_str() {
@@ -309,8 +366,16 @@ fn outcome_signals<'a>(
             let signals = found
                 .entry(request.record["id"].as_str().unwrap_or(""))
                 .or_default();
-            if let Some(last) = replies.last()
-                && let Some(question) = clarifying_question(last["text"].as_str().unwrap_or(""))
+            // The answer the user saw: Codex marks it final_answer; otherwise the last reply.
+            let answer = replies
+                .iter()
+                .rev()
+                .find(|r| r["phase"] == "final_answer")
+                .or(replies.last())
+                .copied();
+            let answer_text = answer.and_then(|r| r["text"].as_str()).unwrap_or("");
+            if let Some(last) = answer
+                && let Some(question) = clarifying_question(answer_text)
             {
                 signals.push(signal(
                     "outcome",
@@ -323,8 +388,13 @@ fn outcome_signals<'a>(
             let Some(next) = next else {
                 continue;
             };
+            if replies.is_empty() {
+                continue;
+            }
             let head: String = next.text.chars().take(20).collect();
-            if !replies.is_empty() && CORRECTIONS.iter().any(|c| head.contains(c)) {
+            let declined =
+                REFUSALS.iter().any(|r| head.contains(r)) && final_question(answer_text).is_none();
+            if CORRECTIONS.iter().any(|c| head.contains(c)) || declined {
                 signals.push(signal(
                     "outcome",
                     "correction",
@@ -334,6 +404,8 @@ fn outcome_signals<'a>(
                 ));
             } else if request.text.chars().count() >= 8
                 && next.text.chars().count() >= 8
+                // An identical command ("다음 태스크 진행해줘") continues the work; a retry rephrases.
+                && clip(&request.text, 400) != clip(&next.text, 400)
                 && similarity(&request.text, &next.text) >= RETRY_SIMILARITY
             {
                 signals.push(signal(
@@ -517,7 +589,8 @@ mod tests {
                 reply("r", "파일 구조를 정리했습니다.", 1),
                 user("b", "그거 말고 버튼 사이 간격 말한 거야", 2),
                 user("c", "릴리즈 워크플로에서 설치 파일이 안 보여", 3),
-                user("d", "릴리즈 워크플로에서 설치 파일이 왜 안 보이지", 4),
+                reply("r2", "워크플로 파일을 확인했습니다.", 4),
+                user("d", "릴리즈 워크플로에서 설치 파일이 왜 안 보이지", 5),
             ],
             &Detection::default(),
         );
@@ -585,5 +658,127 @@ mod tests {
         let with = Detection::with_dictionary(&["대강".to_owned()], &[], []);
         let result = run(&[user("1", "대강 해줘", 0)], &with);
         assert_eq!(types(&result["candidates"][0]), ["phrase"]);
+    }
+    fn codex(id: &str, role: &str, text: &str, at: &str, phase: Value) -> Value {
+        json!({"id":id,"role":role,"projectId":"p","text":text,"occurredAt":at,"phase":phase,
+            "source":{"provider":"codex","sessionId":"t","itemId":id,"sourceKind":"cli"}})
+    }
+    #[test]
+    fn codex_turn_order_ties_put_the_request_first() {
+        // Every item of a Codex turn shares the turn's start time and the store orders by hash.
+        let (first, second) = ("2026-11-02T10:00:00Z", "2026-11-02T10:05:00Z");
+        let records = [
+            codex(
+                "a2",
+                "assistant",
+                "어떤 항목을 넣을지 알려 주세요?",
+                second,
+                json!("final_answer"),
+            ),
+            codex("q1", "user", "로그인 화면 만들어줘", first, Value::Null),
+            codex(
+                "a1",
+                "assistant",
+                "만들었습니다.",
+                first,
+                json!("final_answer"),
+            ),
+            codex("q2", "user", "설정 화면 만들어줘", second, Value::Null),
+        ];
+        let result = run(&records, &Detection::default());
+        let candidates = result["candidates"].as_array().unwrap();
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0]["recordId"], "q2");
+        assert_eq!(candidates[0]["signals"][0]["type"], "clarification");
+    }
+    #[test]
+    fn records_without_time_are_not_linked() {
+        // A request without a time sorts first; it must not borrow the next reply in the session.
+        let mut untimed = user("1", "버튼 손봐줘", 0);
+        untimed["occurredAt"] = Value::Null;
+        let result = run(
+            &[untimed, reply("2", "어떤 버튼을 말씀하시는 건가요?", 1)],
+            &Detection::default(),
+        );
+        assert_eq!(result["candidates"], json!([]));
+    }
+    #[test]
+    fn short_conditional_offer_is_not_clarification() {
+        let result = run(
+            &[
+                user("1", "로그인 화면 만들어줘", 0),
+                reply(
+                    "2",
+                    "로그인 화면을 추가했습니다. 원하시면 테스트도 추가해 드릴까요?",
+                    1,
+                ),
+            ],
+            &Detection::default(),
+        );
+        assert_eq!(result["candidates"], json!([]));
+    }
+    #[test]
+    fn question_marks_in_code_are_ignored() {
+        let result = run(
+            &[
+                user("1", "fix the parser bug in src/parse.rs line 40", 0),
+                reply(
+                    "2",
+                    "Fixed it, which avoids the panic.\n```rust\nlet v = parse(input)?;\n```\nDone.",
+                    1,
+                ),
+            ],
+            &Detection::default(),
+        );
+        assert_eq!(result["candidates"], json!([]));
+    }
+    #[test]
+    fn question_quote_keeps_file_names() {
+        let result = run(
+            &[
+                user("1", "버튼 고쳐줘", 0),
+                reply("2", "어떤 파일을 고칠지 App.tsx도 포함할까요?", 1),
+            ],
+            &Detection::default(),
+        );
+        let quote = result["candidates"][0]["signals"][0]["quote"]
+            .as_str()
+            .unwrap();
+        assert!(quote.contains("App.tsx"));
+    }
+    #[test]
+    fn repeated_identical_commands_are_not_retries() {
+        let result = run(
+            &[
+                user("1", "다음 태스크 진행해줘", 0),
+                reply("2", "진행했습니다.", 1),
+                user("3", "다음 태스크 진행해줘", 2),
+            ],
+            &Detection::default(),
+        );
+        assert_eq!(result["candidates"], json!([]));
+    }
+    #[test]
+    fn declining_an_offer_is_not_a_correction() {
+        let result = run(
+            &[
+                user("1", "로그인 화면 만들어줘", 0),
+                reply("2", "추가했습니다. 영어 버전도 만들까요?", 1),
+                user("3", "아니요 괜찮아요", 2),
+            ],
+            &Detection::default(),
+        );
+        assert_eq!(result["candidates"], json!([]));
+    }
+    #[test]
+    fn area_words_match_whole_words() {
+        for text in ["build it", "linux에서 돌려줘", "이 구조체에 필드 추가해줘"] {
+            let result = run(&[user("1", text, 0)], &Detection::default());
+            assert_eq!(result["candidates"], json!([]), "{text}");
+        }
+        let result = run(&[user("1", "make the UI better", 0)], &Detection::default());
+        assert_eq!(result["candidates"][0]["signals"][0]["quote"], "UI");
+        let result = run(&[user("1", "ui/ux 개선해줘", 0)], &Detection::default());
+        assert_eq!(types(&result["candidates"][0]), ["area-only"]);
     }
 }
