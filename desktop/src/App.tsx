@@ -27,6 +27,7 @@ import type { ChangePlan, ChatSelection, NativeError, Page, Snapshot } from "./t
 import { Button } from "./components";
 import { NavigationButton } from "./navigation-button";
 import { Notifications } from "./notifications";
+import { WindowControls } from "./window-controls";
 import { getSettingsSection, settingsSections } from "./settings-sections";
 import {
   AnalysisPage,
@@ -220,25 +221,29 @@ export default function App() {
   return (
     <div className={`app-shell${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
       <a className="skip-link" href="#workspace-content">본문으로 이동</a>
-      <header className="titlebar">
-        <div className="app-brand">
+      {/* The OS frame is off: this header is the window's title bar. Tauri drags only from elements that carry
+          data-tauri-drag-region, so every empty area has it and controls do not. */}
+      <header className="titlebar" data-tauri-drag-region>
+        <div className="app-brand" data-tauri-drag-region>
           <img
             className="brand-icon"
             src="/branding/silolink-app-icon.png"
             alt=""
             width="40"
             height="40"
+            draggable={false}
+            data-tauri-drag-region
           />
-          <span className="brand-name">SiloLink</span>
+          <span className="brand-name" data-tauri-drag-region>SiloLink</span>
         </div>
-        <div className="contextbar">
-          <nav className="context-location" aria-label="현재 위치">
+        <div className="contextbar" data-tauri-drag-region>
+          <nav className="context-location" aria-label="현재 위치" data-tauri-drag-region>
             {section && <><Button quiet onClick={() => navigate(section.items[0][0])}>{section.label}</Button><ChevronRight aria-hidden="true" /></>}
             {page === "docs" && tab === "reader" && document ? <>
               <Button quiet onClick={() => navigate("docs")}>기록·문서</Button><ChevronRight /><strong aria-current="page">{document.path}</strong>
             </> : <strong aria-current="page">{pageName}</strong>}
           </nav>
-          <div className="context-actions">
+          <div className="context-actions" data-tauri-drag-region>
             {snapshot && snapshot.workspace.projects.length > 0 ? (
               <select
                 id="project-scope"
@@ -260,6 +265,7 @@ export default function App() {
             <Button quiet aria-label="새로고침" title="새로고침" disabled={busy} onClick={() => void perform(refresh)}><RefreshCw /></Button>
           </div>
         </div>
+        <WindowControls />
       </header>
       <div className="app-body">
         <aside className="sidebar" id="app-navigation" ref={sidebarElement}>

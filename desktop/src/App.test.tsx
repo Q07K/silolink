@@ -22,6 +22,15 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+it("앱 헤더가 창 제목 줄을 겸해 끌어서 창을 옮기고 창 버튼을 품는다", async () => {
+  const { container } = render(<App />);
+  const header = container.querySelector(".titlebar")!;
+  expect(header.hasAttribute("data-tauri-drag-region")).toBe(true);
+  for (const name of ["최소화", "최대화", "닫기"])
+    expect(within(header as HTMLElement).getByRole("button", { name })).toBeTruthy();
+  await waitFor(() => expect(loadWorkspace).toHaveBeenCalled());
+});
+
 it("스킬 프로젝트 등록 오류를 숨기지 않고 앱에서 복구 안내를 표시한다", async () => {
   vi.mocked(loadWorkspace).mockResolvedValue({
     ...structuredClone(emptySnapshot),

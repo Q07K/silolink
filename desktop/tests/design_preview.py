@@ -128,7 +128,7 @@ with sync_playwright() as playwright:
             page.screenshot(path=str(OUT / f'settings-sidebar-{theme}.png'))
             assert page.locator('.titlebar-meta, .app-footer').count() == 0
             assert page.locator('.titlebar .contextbar').count() == 1
-            assert page.locator('.titlebar').bounding_box()['height'] == 64
+            assert page.locator('.titlebar').bounding_box()['height'] == 48
             page.get_by_role('button', name='사이드바 접기', exact=True).click()
             assert page.locator('.sidebar').bounding_box()['width'] == 72
             categories.get_by_role('button', name='화면', exact=True).hover()

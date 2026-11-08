@@ -3,5 +3,11 @@
   "identifier": "main-window",
   "description": "Local SiloLink window; project access goes through validated Rust commands.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging"
+  ]
 }

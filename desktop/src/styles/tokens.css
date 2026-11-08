@@ -38,7 +38,13 @@
   --focus-glow: color-mix(in srgb, var(--accent) 32%, transparent);
   --focus-ring: 0 0 0 1px var(--accent), 0 0 0 4px var(--focus-glow);
   --focus-ring-gap: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent), 0 0 0 7px var(--focus-glow);
-  /* App shell */
+  /* App shell. The window frame holds the title bar and menu; pages sit on a card inside it. */
+  --frame: light-dark(#e9edf4, #0b0e14);
+  --frame-hover: light-dark(#1018280d, #ffffff0f);
+  --frame-gap: var(--space-1);
+  /* Windows paints its close button red on hover; keep that convention. */
+  --window-close: #c42b1c;
+  --on-window-close: #ffffff;
   --sidebar: light-dark(#f0f3fa, #171e2b);
   --sidebar-text: light-dark(#202b40, #f0f4ff);
   --sidebar-muted: light-dark(#5f6e86, #aebbd0);
@@ -61,6 +67,7 @@
   --shadow: 0 4px 18px light-dark(#20345906, #00000012);
   --shadow-panel: var(--shadow);
   --shadow-raised: 0 2px 8px light-dark(#2034590f, #00000040);
+  --shadow-frame-card: 0 1px 2px light-dark(#1018280d, #00000066);
   --shadow-overlay: 0 12px 40px light-dark(#101b3030, #00000070);
   /* Type roles: use the same role in headers, navigation and content. */
   --font-sans: "Pretendard Variable", Pretendard, "Segoe UI", "Malgun Gothic", sans-serif;
@@ -98,6 +105,9 @@
   --radius-panel: 12px;
   --radius-pill: 999px;
   --control-height: 40px;
+  --titlebar-control: 32px;
+  --window-control-width: 46px;
+  --window-control-icon: 14px;
   --tab-height: 44px;
   --badge-height: 24px;
   --row-min-height: 56px;
@@ -108,7 +118,7 @@
   --sidebar-expanded: 240px;
   --sidebar-narrow: 216px;
   --sidebar-compact: 72px;
-  --header-height: 64px;
+  --header-height: 48px;
   --content-max: 1440px;
   --measure: 490px;
   --popover-width: 380px;
