@@ -7,6 +7,9 @@ param(
 # Places the SignPath-signed app and CLI where `tauri bundle` and package-release.ps1 read them.
 # Nothing is copied unless every file carries a valid signature from the expected signer.
 $ErrorActionPreference = 'Stop'
+# Windows PowerShell started from PowerShell 7 inherits PS7 module paths and cannot autoload its own
+# security cmdlets, so load the module that belongs to the running shell explicitly.
+Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Security')
 $signed = (Resolve-Path -LiteralPath $SignedDirectory).Path
 $names = @('silolink-desktop.exe', 'silolink.exe')
 foreach ($name in $names) {

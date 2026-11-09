@@ -33,6 +33,9 @@ function Assert-Signed([string]$Path, [string]$Label) {
     }
 }
 if ($RequireSignature) {
+    # Windows PowerShell started from PowerShell 7 inherits PS7 module paths and cannot autoload its own
+    # security cmdlets, so load the module that belongs to the running shell explicitly.
+    Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Security')
     Assert-Signed $cli 'The CLI'
     Assert-Signed $installers[0].FullName 'The installer'
     # The installer embeds its own copies of the app and CLI; check those, not just the build folder.
