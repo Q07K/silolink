@@ -42,6 +42,9 @@ foreach ($sourceSkill in $skillSources) {
         Copy-Item -LiteralPath $interface -Destination (Join-Path $targetSkill 'agents\openai.yaml')
     }
 }
+foreach ($license in @('LICENSE-MIT', 'LICENSE-APACHE')) {
+    Copy-Item -LiteralPath (Join-Path $repository $license) -Destination (Join-Path $plugin $license)
+}
 Copy-Item -LiteralPath (Join-Path $repository 'assets\branding\silolink-v1\silolink-symbol-blue.png') -Destination (Join-Path $plugin 'assets\icon.png')
 $catalog = [ordered]@{
     name = 'silolink-preview'
