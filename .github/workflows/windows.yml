@@ -14,23 +14,30 @@ concurrency:
   group: windows-${{ github.ref }}
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
+env:
+  # Release tags are signed through SignPath once the repository variable SIGNPATH_ORGANIZATION_ID is set.
+  # See docs/development/releasing.md#코드-서명 and CODE_SIGNING.md.
+  SIGN_RELEASE: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && vars.SIGNPATH_ORGANIZATION_ID != '' }}
+
 jobs:
   build:
     runs-on: windows-latest
     timeout-minutes: 60
     outputs:
       version: ${{ steps.version.outputs.version }}
+      binaries-artifact-id: ${{ steps.upload-binaries.outputs.artifact-id }}
     defaults:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22.20.0'
-          cache: npm
+          # Release tags build from a clean install: the executables of this job are the ones that get signed.
+          cache: ${{ !startsWith(github.ref, 'refs/tags/') && 'npm' || '' }}
           cache-dependency-path: desktop/package-lock.json
       - name: Check release version
         id: version
@@ -61,7 +68,7 @@ jobs:
         working-directory: desktop
         run: npm test
       - name: Build native test provider
-        run: cargo build -p silolink-desktop --bin silolink-desktop-provider-fixture --locked
+        run: cargo build -p silolink-desktop-provider-fixture --locked
       - name: Build Windows installer
         run: .\scripts\desktop.ps1 -Mode build
       - name: Verify installer maintenance and data preservation
@@ -72,7 +79,7 @@ jobs:
       # WebView2 remote-debugging endpoint never opens, so Playwright cannot attach.
       - name: Keep installer test evidence after a failure
         if: failure()
-        uses: actions/upload-artifact@v7.0.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: installer-test-evidence
           if-no-files-found: ignore
@@ -84,7 +91,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: .\scripts\package-release.ps1 -OutputDirectory .tools/release-assets -Tag $env:RELEASE_TAG
-      - uses: actions/upload-artifact@v7.0.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-release
           if-no-files-found: error
@@ -95,10 +102,127 @@ jobs:
             .tools/release-assets/*.exe
             .tools/release-assets/*.zip
             .tools/release-assets/SHA256SUMS.txt
+      - name: Collect the tested executables for signing
+        if: env.SIGN_RELEASE == 'true'
+        run: |
+          New-Item -ItemType Directory -Path .tools/unsigned-binaries | Out-Null
+          Copy-Item -LiteralPath target/release/silolink-desktop.exe, target/release/silolink.exe -Destination .tools/unsigned-binaries/
+      - name: Upload the executables for SignPath
+        id: upload-binaries
+        if: env.SIGN_RELEASE == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unsigned-binaries
+          if-no-files-found: error
+          retention-days: 1
+          path: .tools/unsigned-binaries/*
+
+  # SignPath cannot sign files inside an NSIS installer, so the app and CLI are signed first,
+  # the installer is bundled again around them, and the installer is signed in a second request.
+  # Each request waits for an approver (see CODE_SIGNING.md).
+  sign:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && vars.SIGNPATH_ORGANIZATION_ID != ''
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 150
+    permissions:
+      actions: read
+      contents: read
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.20.0'
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install 1.90.0 --profile minimal
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          rustup default 1.90.0
+      - name: Install frontend dependencies
+        working-directory: desktop
+        run: npm ci
+      - name: Sign the app and CLI executables
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'silolink' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: binaries
+          github-artifact-id: ${{ needs.build.outputs.binaries-artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: .tools/signed-binaries
+          parameters: |
+            version: ${{ toJSON(needs.build.outputs.version) }}
+      - name: Place the signed executables
+        run: .\scripts\use-signed-binaries.ps1 -SignedDirectory .tools/signed-binaries
+      - name: Bundle the installer around the signed executables
+        working-directory: desktop
+        run: |
+          npm run tauri -- bundle --bundles nsis
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Collect the installer for signing
+        run: |
+          $installers = @(Get-ChildItem -LiteralPath target/release/bundle/nsis -Filter '*-setup.exe' -File)
+          if ($installers.Count -ne 1) { throw 'Expected exactly one bundled installer.' }
+          New-Item -ItemType Directory -Path .tools/unsigned-installer | Out-Null
+          Copy-Item -LiteralPath $installers[0].FullName -Destination .tools/unsigned-installer/
+      - name: Upload the installer for SignPath
+        id: upload-installer
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unsigned-installer
+          if-no-files-found: error
+          retention-days: 1
+          path: .tools/unsigned-installer/*
+      - name: Sign the installer
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'silolink' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.upload-installer.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: .tools/signed-installer
+          parameters: |
+            version: ${{ toJSON(needs.build.outputs.version) }}
+      - name: Use the signed installer
+        run: |
+          $signed = @(Get-ChildItem -LiteralPath .tools/signed-installer -Filter '*-setup.exe' -File)
+          if ($signed.Count -ne 1) { throw 'Expected exactly one signed installer.' }
+          Copy-Item -LiteralPath $signed[0].FullName -Destination (Join-Path target/release/bundle/nsis $signed[0].Name) -Force
+      - name: Assemble signed release files and checksums
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: .\scripts\package-release.ps1 -OutputDirectory .tools/release-assets -Tag $env:RELEASE_TAG -RequireSignature
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-release-signed
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          include-hidden-files: true
+          path: |
+            .tools/release-assets/*.exe
+            .tools/release-assets/*.zip
+            .tools/release-assets/SHA256SUMS.txt
 
   publish:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    # Once signing is configured, a tag is published only with the signed files.
+    if: >-
+      always() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') &&
+      needs.build.result == 'success' &&
+      (needs.sign.result == 'success' || (needs.sign.result == 'skipped' && vars.SIGNPATH_ORGANIZATION_ID == ''))
+    needs: [build, sign]
     runs-on: windows-latest
     timeout-minutes: 10
     permissions:
@@ -107,12 +231,12 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@v8.0.2
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: windows-release
+          name: ${{ needs.sign.result == 'success' && 'windows-release-signed' || 'windows-release' }}
           path: release-assets
       - name: Publish tested files to GitHub Releases
         env:

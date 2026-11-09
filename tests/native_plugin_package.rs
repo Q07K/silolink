@@ -58,6 +58,12 @@ fn plugin_package_carries_its_cli_and_survives_cache_relocation_without_path_or_
     }
     let skill = fs::read_to_string(plugin.join("skills/silolink/SKILL.md")).unwrap();
     assert!(skill.contains("../../bin/silolink.exe"));
+    for license in ["LICENSE-MIT", "LICENSE-APACHE"] {
+        assert!(
+            plugin.join(license).is_file(),
+            "The plugin must ship {license}."
+        );
+    }
     assert!(!plugin.join("skills/silolink/installation.json").exists());
     let manifest: Value =
         serde_json::from_slice(&fs::read(plugin.join(".codex-plugin/plugin.json")).unwrap())

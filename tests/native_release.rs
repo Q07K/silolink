@@ -62,3 +62,78 @@ fn release_packaging_requires_a_real_build_and_preserves_existing_output() {
     assert!(!missing_build.status.success());
     assert!(!absent_output.exists());
 }
+
+fn run_script(name: &str, arguments: &[&std::ffi::OsStr]) -> std::process::Output {
+    Command::new("powershell.exe")
+        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"])
+        .arg(
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("scripts")
+                .join(name),
+        )
+        .args(arguments)
+        .output()
+        .unwrap()
+}
+
+#[test]
+fn signed_binaries_are_placed_only_when_every_file_carries_a_valid_signature() {
+    let root = TempDir::new().unwrap();
+    let signed = root.path().join("signed");
+    fs::create_dir(&signed).unwrap();
+    let unsigned = Path::new(env!("CARGO_BIN_EXE_silolink"));
+    fs::copy(unsigned, signed.join("silolink.exe")).unwrap();
+    let build = root.path().join("build");
+    let resources = root.path().join("resources");
+    let place = || {
+        run_script(
+            "use-signed-binaries.ps1",
+            &[
+                "-SignedDirectory".as_ref(),
+                signed.as_os_str(),
+                "-BuildDirectory".as_ref(),
+                build.as_os_str(),
+                "-ResourceDirectory".as_ref(),
+                resources.as_os_str(),
+            ],
+        )
+    };
+    let missing = place();
+    assert!(!missing.status.success());
+    assert!(String::from_utf8_lossy(&missing.stderr).contains("missing silolink-desktop.exe"));
+    fs::copy(unsigned, signed.join("silolink-desktop.exe")).unwrap();
+    let rejected = place();
+    assert!(!rejected.status.success());
+    assert!(String::from_utf8_lossy(&rejected.stderr).contains("not validly signed"));
+    assert!(!build.exists() && !resources.exists());
+}
+
+#[test]
+fn signature_required_release_rejects_unsigned_files_before_writing_output() {
+    let root = TempDir::new().unwrap();
+    let build = root.path().join("build");
+    fs::create_dir_all(build.join("bin")).unwrap();
+    fs::create_dir_all(build.join("bundle/nsis")).unwrap();
+    let unsigned = Path::new(env!("CARGO_BIN_EXE_silolink"));
+    fs::copy(unsigned, build.join("silolink.exe")).unwrap();
+    fs::copy(unsigned, build.join("bin/silolink.exe")).unwrap();
+    fs::copy(
+        unsigned,
+        build.join("bundle/nsis/SiloLink_0.0.0_x64-setup.exe"),
+    )
+    .unwrap();
+    let output = root.path().join("assets");
+    let result = run_script(
+        "package-release.ps1",
+        &[
+            "-BuildDirectory".as_ref(),
+            build.as_os_str(),
+            "-OutputDirectory".as_ref(),
+            output.as_os_str(),
+            "-RequireSignature".as_ref(),
+        ],
+    );
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr).contains("not validly signed"));
+    assert!(!output.exists());
+}

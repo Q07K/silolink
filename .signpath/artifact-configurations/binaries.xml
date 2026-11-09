@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SignPath artifact configuration "binaries": the app and CLI executables, signed before the installer is bundled.
+     The upload-artifact action wraps the files in a ZIP, so the root element is <zip-file>. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+  </parameters>
+  <zip-file>
+    <pe-file path="silolink-desktop.exe" product-name="SiloLink" product-version="${version}">
+      <authenticode-sign />
+    </pe-file>
+    <pe-file path="silolink.exe" product-name="SiloLink" product-version="${version}">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

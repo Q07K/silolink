@@ -1,0 +1,17 @@
+[package]
+name = "silolink-desktop-provider-fixture"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.90"
+license = "MIT OR Apache-2.0"
+description = "Stand-in AI provider for desktop smoke tests; never bundled into the installer"
+publish = false
+
+# Kept out of the silolink-desktop package: Tauri bundles every binary of the app package into the installer.
+[[bin]]
+name = "silolink-desktop-provider-fixture"
+path = "src/main.rs"
+test = false
+
+[dependencies]
+serde_json = "1"
