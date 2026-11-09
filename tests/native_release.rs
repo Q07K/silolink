@@ -63,7 +63,22 @@ fn release_packaging_requires_a_real_build_and_preserves_existing_output() {
     assert!(!absent_output.exists());
 }
 
+/// Runs a script the way CI does: Windows PowerShell started from PowerShell 7 inherits a module path
+/// whose Microsoft.PowerShell.Security cannot load in Windows PowerShell.
 fn run_script(name: &str, arguments: &[&std::ffi::OsStr]) -> std::process::Output {
+    let modules = TempDir::new().unwrap();
+    let security = modules.path().join("Microsoft.PowerShell.Security");
+    fs::create_dir(&security).unwrap();
+    fs::write(
+        security.join("Microsoft.PowerShell.Security.psd1"),
+        "@{ ModuleVersion = '7.0.0.0'; PowerShellVersion = '7.0'; CmdletsToExport = @('Get-AuthenticodeSignature') }",
+    )
+    .unwrap();
+    let inherited = std::env::var_os("PSModulePath").unwrap_or_default();
+    let module_path = std::env::join_paths(
+        std::iter::once(modules.path().to_path_buf()).chain(std::env::split_paths(&inherited)),
+    )
+    .unwrap();
     Command::new("powershell.exe")
         .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"])
         .arg(
@@ -72,8 +87,17 @@ fn run_script(name: &str, arguments: &[&std::ffi::OsStr]) -> std::process::Outpu
                 .join(name),
         )
         .args(arguments)
+        .env("PSModulePath", module_path)
         .output()
         .unwrap()
+}
+
+fn assert_failed_with(output: &std::process::Output, reason: &str) {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        !output.status.success() && stderr.contains(reason),
+        "expected a failure mentioning {reason:?}, got:\n{stderr}"
+    );
 }
 
 #[test]
@@ -98,13 +122,9 @@ fn signed_binaries_are_placed_only_when_every_file_carries_a_valid_signature() {
             ],
         )
     };
-    let missing = place();
-    assert!(!missing.status.success());
-    assert!(String::from_utf8_lossy(&missing.stderr).contains("missing silolink-desktop.exe"));
+    assert_failed_with(&place(), "missing silolink-desktop.exe");
     fs::copy(unsigned, signed.join("silolink-desktop.exe")).unwrap();
-    let rejected = place();
-    assert!(!rejected.status.success());
-    assert!(String::from_utf8_lossy(&rejected.stderr).contains("not validly signed"));
+    assert_failed_with(&place(), "not validly signed");
     assert!(!build.exists() && !resources.exists());
 }
 
@@ -133,7 +153,6 @@ fn signature_required_release_rejects_unsigned_files_before_writing_output() {
             "-RequireSignature".as_ref(),
         ],
     );
-    assert!(!result.status.success());
-    assert!(String::from_utf8_lossy(&result.stderr).contains("not validly signed"));
+    assert_failed_with(&result, "not validly signed");
     assert!(!output.exists());
 }
