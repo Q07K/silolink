@@ -61,7 +61,7 @@ jobs:
         working-directory: desktop
         run: npm test
       - name: Build native test provider
-        run: cargo build -p silolink-desktop --bin silolink-desktop-provider-fixture --locked
+        run: cargo build -p silolink-desktop-provider-fixture --locked
       - name: Build Windows installer
         run: .\scripts\desktop.ps1 -Mode build
       - name: Verify installer maintenance and data preservation

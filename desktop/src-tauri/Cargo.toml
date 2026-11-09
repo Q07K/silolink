@@ -10,11 +10,6 @@ default-run = "silolink-desktop"
 [features]
 custom-protocol = ["tauri/custom-protocol"]
 
-[[bin]]
-name = "silolink-desktop-provider-fixture"
-path = "tests/support/provider.rs"
-test = false
-
 [lib]
 name = "silolink_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]

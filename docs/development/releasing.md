@@ -60,7 +60,7 @@ $tag = 'v' + (.\scripts\release-version.ps1)
 .\scripts\cargo.ps1 -CargoArguments @('test', '--all-targets', '--locked')
 .\scripts\cargo.ps1 -CargoArguments @('test', '-p', 'silolink-desktop', '--lib', '--locked')
 .\scripts\desktop.ps1 -Mode build
-.\scripts\cargo.ps1 -CargoArguments @('build', '-p', 'silolink-desktop', '--bin', 'silolink-desktop-provider-fixture', '--locked')
+.\scripts\cargo.ps1 -CargoArguments @('build', '-p', 'silolink-desktop-provider-fixture', '--locked')
 python desktop\tests\native_smoke.py --executable target\release\silolink-desktop.exe
 .\scripts\package-release.ps1 -OutputDirectory .tools\release-assets -Tag $tag
 ```

@@ -9,7 +9,7 @@ publish = false
 default-run = "silolink"
 
 [workspace]
-members = ["desktop/src-tauri"]
+members = ["desktop/src-tauri", "desktop/provider-fixture"]
 default-members = ["."]
 resolver = "3"
 
