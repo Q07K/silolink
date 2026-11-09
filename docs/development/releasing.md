@@ -23,7 +23,46 @@
 
 검사·빌드·설치기·브랜딩 검증 후 `scripts/package-release.ps1`이 파일을 모은다. 실제 WebView2 화면을 조작하는 `desktop/tests/native_smoke.py`는 호스팅 러너에서 WebView2 원격 디버깅 포트가 열리지 않아 워크플로에서 제외했다. 태그를 만들기 전에 아래 로컬 검증에서 실행한다. 별도 게시 job은 전달받은 파일 개수·체크섬을 확인하고 초안 릴리스에 업로드한 뒤 공개한다. 실패하면 초안 상태로 남을 수 있다. 같은 태그의 초안은 재실행으로 이어갈 수 있고, 이미 공개한 릴리스는 덮어쓰지 않는다. 수정 배포는 새 버전을 만든다. 하이픈이 들어간 버전 태그는 prerelease로 표시한다.
 
-일반 빌드 결과는 Actions의 `windows-release` 아티팩트에 14일 보관한다. 공개 Releases 게시와 아티팩트 다운로드는 별도 경로다. 코드 서명·자동 업데이트·macOS 배포는 현재 포함하지 않는다.
+일반 빌드 결과는 Actions의 `windows-release` 아티팩트에 14일 보관한다. 공개 Releases 게시와 아티팩트 다운로드는 별도 경로다. 자동 업데이트·macOS 배포는 현재 포함하지 않는다. 코드 서명은 아래 SignPath 설정을 마친 저장소에서만 동작한다.
+
+## 코드 서명
+
+[SignPath Foundation](https://signpath.org)의 무료 오픈소스 코드 서명을 사용한다. 공개 정책은 [CODE_SIGNING.md](../../CODE_SIGNING.md), SignPath에 붙여 넣는 아티팩트 구성 원본은 [`.signpath/`](../../.signpath/)에 있다. 저장소 변수 `SIGNPATH_ORGANIZATION_ID`가 없으면 서명 job을 건너뛰고 지금처럼 서명 없는 파일을 게시한다. 변수를 설정한 뒤에는 서명에 실패하면 게시하지 않는다.
+
+### 흐름
+
+SignPath는 NSIS 설치 프로그램 안의 파일을 서명하지 못한다. 그래서 태그 빌드마다 서명 요청을 두 번 보내고, 요청마다 승인자가 SignPath에서 승인한다.
+
+1. `build` job이 모든 검사·설치기·브랜딩 검증을 마친 뒤, 검증한 `silolink-desktop.exe`·`silolink.exe`를 `unsigned-binaries` 아티팩트로 올린다.
+2. `sign` job이 아티팩트 구성 `binaries`로 첫 요청을 보낸다. 승인 후 받은 파일은 `scripts/use-signed-binaries.ps1`이 SignPath Foundation의 유효한 서명인지 확인한 뒤 `target/release`·`target/release/bin`·`desktop/src-tauri/resources`에 둔다.
+3. `tauri bundle --bundles nsis`가 서명된 실행 파일로 설치 프로그램만 다시 만든다. Rust를 다시 컴파일하지 않는다.
+4. 아티팩트 구성 `installer`로 두 번째 요청을 보내고, 승인되면 서명된 설치 프로그램으로 바꾼다.
+5. `package-release.ps1 -RequireSignature`가 CLI·설치 프로그램과, 7-Zip으로 꺼낸 설치 프로그램 안의 앱·CLI까지 서명을 확인한 뒤 체크섬을 만든다. 결과는 `windows-release-signed` 아티팩트이며 `publish` job은 이 파일만 게시한다.
+
+`tauri bundle`은 앱 실행 파일 안의 번들 종류 표시를 다시 쓴다. `build` job에서 이미 NSIS로 표시된 파일은 다시 써도 바이트가 같아 서명이 유지된다. `use-signed-binaries.ps1`은 이 표시가 없는 파일을 거절한다. 설치 프로그램이 임시 폴더에서 쓰는 NSIS 플러그인 DLL(`cinematic-controls.dll` 포함)과 설치 때 만들어지는 제거 프로그램은 서명 대상이 아니다. 데스크톱 시험용 공급자는 별도 크레이트 `desktop/provider-fixture`로 분리했다. Tauri가 앱 패키지의 모든 바이너리를 설치 프로그램에 넣기 때문이다.
+
+### 한 번만 하는 설정
+
+1. 저장소를 공개 상태로 두고 LICENSE·[CODE_SIGNING.md](../../CODE_SIGNING.md)·서명 없는 릴리스가 `main`에 있는지 확인한다.
+2. GitHub와 SignPath 계정의 2단계 인증(MFA)을 켠다. SignPath Foundation의 필수 조건이다.
+3. [signpath.org/apply](https://signpath.org/apply)에서 신청한다. 저장소 URL, 다운로드 페이지(GitHub Releases), 코드 서명 정책 URL을 준비한다.
+4. 승인되면 SignPath에서 다음을 만든다.
+   - 프로젝트 slug `silolink`. 저장소 `Q07K/silolink`와 GitHub 신뢰 빌드 시스템을 연결한다.
+   - 아티팩트 구성 slug `binaries`·`installer`. 내용은 `.signpath/artifact-configurations/`의 XML을 그대로 붙여 넣는다.
+   - 서명 정책 slug `release-signing`. SignPath Foundation 인증서를 쓰고, 승인자 1명의 수동 승인을 요구한다.
+   - 제출 권한만 있는 CI 사용자와 API 토큰.
+5. GitHub 저장소 설정 → Secrets and variables → Actions에 다음을 넣는다.
+
+| 종류 | 이름 | 값 |
+| --- | --- | --- |
+| Secret | `SIGNPATH_API_TOKEN` | CI 사용자의 API 토큰 |
+| Variable | `SIGNPATH_ORGANIZATION_ID` | SignPath 조직 ID. 이 값이 있어야 서명이 켜진다 |
+| Variable | `SIGNPATH_PROJECT_SLUG` | 생략하면 `silolink` |
+| Variable | `SIGNPATH_SIGNING_POLICY_SLUG` | 생략하면 `release-signing` |
+
+### 릴리스할 때
+
+태그를 푸시한 뒤 SignPath에 승인 요청이 두 번 온다. 각 요청은 1시간 안에 승인해야 하며, 넘기면 `sign` job이 실패하고 아무것도 게시하지 않는다. 같은 태그로 워크플로를 다시 실행하면 처음부터 다시 요청한다. 첫 서명 릴리스에서는 설치 프로그램과 설치된 앱의 **속성 → 디지털 서명**에 SignPath Foundation이 보이는지 직접 확인한다. 서명 후에도 SmartScreen 평판이 쌓이기 전까지 첫 몇 주는 경고가 뜰 수 있다.
 
 ## 설치 EXE의 화면과 버전 처리
 
@@ -50,7 +89,7 @@
 
 프로세스 표시 정보는 `powershell -NoProfile -ExecutionPolicy Bypass -File desktop/tests/process_branding.ps1`로 확인한다. 앱·CLI·설치기의 `FileDescription`·`ProductName`과 EXE 아이콘을 Windows 셸 API로 읽어 브랜드 ICO와 대조하고, 격리 프로필로 앱을 실행해 실제 `SiloLink` 창과 런타임 아이콘도 확인한다. 결과 JSON과 추출한 아이콘은 `.tools/process-branding/<id>/`에 남는다. 원본 ICO와 EXE 모두 동일한 Windows 아이콘 추출 API를 사용한다. 실행 창에서는 Tao가 지정하는 작은 아이콘도 조회하고, 별도 가장자리 여백이 있는 ICO의 32px 항목 대신 창에 사용하는 원본 128px PNG를 같은 크기로 정규화해 대조한다.
 
-업데이트 도중 강제 종료·정전 시 전체 파일 교체를 원자적으로 되돌리는 기능과 실제 서명된 공개 배포는 이 범위에 포함하지 않는다.
+업데이트 도중 강제 종료·정전 시 전체 파일 교체를 원자적으로 되돌리는 기능은 이 범위에 포함하지 않는다.
 
 ## 로컬 검증
 

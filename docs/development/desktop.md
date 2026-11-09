@@ -19,7 +19,7 @@ Windows x64·MSVC·WebView2를 기준으로 확인한다. 소스 개발에는 No
 
 스크립트는 기존 저장소의 로컬 MSVC 도구체인이 있으면 그것을 사용하고, 종료 후 환경 변수를 복구한다. 프런트엔드 의존성은 `desktop/package-lock.json`, Rust 의존성은 루트 `Cargo.lock`으로 고정한다. 루트 Cargo의 기본 대상은 기존 CLI로 유지한다.
 
-실행 파일은 `target/release/silolink-desktop.exe`, NSIS 설치 프로그램은 `target/release/bundle/nsis/`에 생성된다. 설치 프로그램을 빌드하는 것과 사용자 PC에 실제 설치하는 것은 구별한다. 자동 업데이트·코드 서명·macOS 배포는 현재 제공하지 않는다.
+실행 파일은 `target/release/silolink-desktop.exe`, NSIS 설치 프로그램은 `target/release/bundle/nsis/`에 생성된다. 설치 프로그램을 빌드하는 것과 사용자 PC에 실제 설치하는 것은 구별한다. 자동 업데이트·macOS 배포는 현재 제공하지 않는다. 코드 서명은 태그 릴리스에서 SignPath로 처리한다([배포 문서](releasing.md#코드-서명)).
 
 데스크톱 스크립트는 먼저 `prepare-desktop.ps1`로 CLI를 빌드하고 Tauri 리소스로 준비한다. 설치 프로그램에 `bin/silolink.exe`가 포함된다. 개발자가 Cargo로 앱을 직접 검사할 때도 먼저 `.\scripts\prepare-desktop.ps1 -Profile debug`를 실행한다. 앱 EXE만 다른 폴더로 복사하면 이 리소스가 누락되므로 설치 프로그램을 사용하거나 `bin`도 함께 보존한다.
 
