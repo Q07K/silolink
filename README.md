@@ -23,7 +23,7 @@ Codex 플러그인으로 관리하려면 실행 파일이 포함된 플러그인
 
 Windows 자동 빌드·배포 [워크플로](.github/workflows/windows.yml)를 제공합니다. `main` 푸시·PR·수동 실행은 검사와 빌드 결과를 만들고, 소스 버전과 일치하는 `v…` 태그 푸시는 검증된 설치 EXE·플러그인 ZIP·체크섬을 GitHub Releases에 게시합니다. 저장소 반영과 첫 원격 실행은 별도 단계이며, 로컬 빌드만으로 공개 릴리스가 생기지는 않습니다. [배포 방법](docs/development/releasing.md)을 참고하세요.
 
-공개 플러그인 디렉터리 등록·자동 업데이트는 아직 제공하지 않습니다. Windows 배포 파일의 코드 서명은 SignPath Foundation 승인 후 적용하며, 범위와 절차는 [Code signing policy](CODE_SIGNING.md)에 있습니다. Markdown(.md) 문서를 지원하며 Word·PDF는 지원하지 않습니다. AI에게 문서와 기록을 근거로 작업하도록 요청할 때 맥락을 활용합니다.
+공개 플러그인 디렉터리 등록·자동 업데이트는 아직 제공하지 않습니다. Windows 배포 파일에는 아직 코드 서명이 없어 설치할 때 SmartScreen 경고가 뜰 수 있습니다. 현황과 추후 적용할 절차는 [Code signing policy](CODE_SIGNING.md)에 있습니다. Markdown(.md) 문서를 지원하며 Word·PDF는 지원하지 않습니다. AI에게 문서와 기록을 근거로 작업하도록 요청할 때 맥락을 활용합니다.
 
 아래는 개발자가 소스에서 실행 파일과 체험 패키지를 만드는 방법입니다.
 

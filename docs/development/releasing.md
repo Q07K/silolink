@@ -23,11 +23,13 @@
 
 검사·빌드·설치기·브랜딩 검증 후 `scripts/package-release.ps1`이 파일을 모은다. 실제 WebView2 화면을 조작하는 `desktop/tests/native_smoke.py`는 호스팅 러너에서 WebView2 원격 디버깅 포트가 열리지 않아 워크플로에서 제외했다. 태그를 만들기 전에 아래 로컬 검증에서 실행한다. 별도 게시 job은 전달받은 파일 개수·체크섬을 확인하고 초안 릴리스에 업로드한 뒤 공개한다. 실패하면 초안 상태로 남을 수 있다. 같은 태그의 초안은 재실행으로 이어갈 수 있고, 이미 공개한 릴리스는 덮어쓰지 않는다. 수정 배포는 새 버전을 만든다. 하이픈이 들어간 버전 태그는 prerelease로 표시한다.
 
-일반 빌드 결과는 Actions의 `windows-release` 아티팩트에 14일 보관한다. 공개 Releases 게시와 아티팩트 다운로드는 별도 경로다. 자동 업데이트·macOS 배포는 현재 포함하지 않는다. 코드 서명은 아래 SignPath 설정을 마친 저장소에서만 동작한다.
+일반 빌드 결과는 Actions의 `windows-release` 아티팩트에 14일 보관한다. 공개 Releases 게시와 아티팩트 다운로드는 별도 경로다. 자동 업데이트·macOS 배포는 현재 포함하지 않는다. 코드 서명은 아래 SignPath 설정을 마친 저장소에서만 동작하며, 현재는 서명 없이 게시한다.
 
 ## 코드 서명
 
-[SignPath Foundation](https://signpath.org)의 무료 오픈소스 코드 서명을 사용한다. 공개 정책은 [CODE_SIGNING.md](../../CODE_SIGNING.md), SignPath에 붙여 넣는 아티팩트 구성 원본은 [`.signpath/`](../../.signpath/)에 있다. 저장소 변수 `SIGNPATH_ORGANIZATION_ID`가 없으면 서명 job을 건너뛰고 지금처럼 서명 없는 파일을 게시한다. 변수를 설정한 뒤에는 서명에 실패하면 게시하지 않는다.
+**현황(2026-11-10):** [SignPath Foundation](https://signpath.org)에 신청했으나 승인받지 못했다. 사유는 품질이 아니라 공개 가시성(GitHub 스타·포크·기여자, 외부 글·언급, 지속적인 활동) 부족이며, 이런 신호가 쌓인 뒤 재신청할 수 있다. 그때까지 `SIGNPATH_ORGANIZATION_ID`를 설정하지 않고 서명 없는 파일을 게시한다. 아래 흐름과 설정은 재신청이 승인되면 그대로 쓴다.
+
+[SignPath Foundation](https://signpath.org)의 무료 오픈소스 코드 서명을 사용하도록 준비해 두었다. 공개 정책은 [CODE_SIGNING.md](../../CODE_SIGNING.md), SignPath에 붙여 넣는 아티팩트 구성 원본은 [`.signpath/`](../../.signpath/)에 있다. 저장소 변수 `SIGNPATH_ORGANIZATION_ID`가 없으면 서명 job을 건너뛰고 지금처럼 서명 없는 파일을 게시한다. 변수를 설정한 뒤에는 서명에 실패하면 게시하지 않는다.
 
 ### 흐름
 

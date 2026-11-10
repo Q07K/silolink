@@ -1,8 +1,8 @@
 # Code signing policy
 
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org)
+**Status: release files are currently not code signed.** SiloLink applied to the [SignPath Foundation](https://signpath.org) open source program and was not accepted yet; we plan to reapply once the project is more widely used. Until then, verify downloads with `SHA256SUMS.txt` from the same release. The rest of this document describes the policy that will apply once signing is in place.
 
-This policy applies to the Windows release files of SiloLink published on [GitHub Releases](https://github.com/Q07K/silolink/releases):
+This policy will apply to the Windows release files of SiloLink published on [GitHub Releases](https://github.com/Q07K/silolink/releases):
 
 - `SiloLink-Setup-<version>-windows-x64.exe` (the app installer) and the executables it installs: `silolink-desktop.exe` and `bin/silolink.exe`
 - `silolink.exe` inside `SiloLink-Codex-Windows-<version>.zip`
@@ -44,4 +44,4 @@ The installer registers an uninstaller in Windows **Settings → Apps**. Uninsta
 
 ## 한국어 요약
 
-SiloLink의 Windows 배포 파일은 [SignPath Foundation](https://signpath.org)의 무료 오픈소스 코드 서명을 받습니다. 이 저장소의 소스로 GitHub 호스팅 러너에서 빌드한 파일만 서명하며, 서명할 때마다 승인자가 직접 승인합니다. 앱은 사용자가 요청하거나 켠 동작(연결한 AI 도구 실행, 입력한 URL의 원문 가져오기) 외에는 어떤 정보도 외부로 보내지 않습니다. 원격 측정이나 자동 업데이트 확인은 없습니다.
+SiloLink의 Windows 배포 파일은 현재 코드 서명이 없습니다. [SignPath Foundation](https://signpath.org)의 오픈소스 프로그램에 신청했으나 아직 승인받지 못했고, 프로젝트가 더 알려진 뒤 다시 신청할 예정입니다. 그때까지는 같은 릴리스의 `SHA256SUMS.txt`로 받은 파일을 확인하세요. 서명을 적용하면 이 저장소의 소스로 GitHub 호스팅 러너에서 빌드한 파일만 서명하며, 서명할 때마다 승인자가 직접 승인합니다. 앱은 사용자가 요청하거나 켠 동작(연결한 AI 도구 실행, 입력한 URL의 원문 가져오기) 외에는 어떤 정보도 외부로 보내지 않습니다. 원격 측정이나 자동 업데이트 확인은 없습니다.

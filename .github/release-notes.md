@@ -37,4 +37,4 @@
 
 Codex의 플러그인 설치 목록에서 관리하려면 **SiloLink-Codex-Windows-….zip**을 모두 압축 해제하고 `시작 안내.html`을 읽으세요. 앱의 스킬 연결과 플러그인 설치는 하나를 선택하면 됩니다.
 
-`SHA256SUMS.txt`에는 두 다운로드 파일의 SHA-256이 들어 있습니다. 현재 Windows x64 배포이며 자동 업데이트는 제공하지 않습니다. 서명된 파일은 **속성 → 디지털 서명**에서 SignPath Foundation을 확인할 수 있습니다. [Code signing policy](https://github.com/Q07K/silolink/blob/main/CODE_SIGNING.md) 문서와 저장한 기록은 앱 제거만으로 자동 삭제되지 않습니다.
+`SHA256SUMS.txt`에는 두 다운로드 파일의 SHA-256이 들어 있습니다. 현재 Windows x64 배포이며 자동 업데이트는 제공하지 않습니다. 배포 파일에는 아직 코드 서명이 없어 Windows SmartScreen 경고가 뜰 수 있습니다([Code signing policy](https://github.com/Q07K/silolink/blob/main/CODE_SIGNING.md)). 문서와 저장한 기록은 앱 제거만으로 자동 삭제되지 않습니다.
